@@ -1,0 +1,66 @@
+# A release, built when a version tag (Major.Minor.Patch) is pushed:  git tag v1.1.0 && git push origin v1.1.0
+#
+# 1. Runs the tests (tests/run.lua, against the fake game). A failing test stops the release.
+# 2. Builds the addon's zip with the BigWigs packager (what goes in: .pkgmeta; the
+#    version in the .toc comes from the tag). Interface 16xxx is the forever client,
+#    so CurseForge files it under "World of Warcraft (forever)".
+# 3. Puts the zip on a GitHub release, and uploads it to CurseForge once both are set:
+#    - the repository variable CURSEFORGE_PROJECT_ID (the number on the project's page,
+#      "Project ID": Settings > Secrets and variables > Actions > Variables)
+#    - the repository secret CF_API_KEY (an API token from
+#      https://legacy.curseforge.com/account/api-tokens)
+#    Without them the CurseForge upload is skipped and the rest still runs.
+# A tag with "alpha" or "beta" in it (v1.1.0-beta1) uploads as an alpha or beta file.
+#
+# Run by hand (Actions > Release > Run workflow): tests and a zip, kept as the run's
+# artifact, with nothing uploaded anywhere.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # the GitHub release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out, with the history the changelog is built from
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install LuaJIT
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq luajit
+
+      - name: Run the tests
+        run: luajit tests/run.lua
+
+      - name: Build the zip and upload it
+        if: github.event_name == 'push'
+        uses: BigWigsMods/packager@01e8631a69c69d7654c788d152630d5fed9e3812   # v2.7.0
+        with:
+          args: ${{ vars.CURSEFORGE_PROJECT_ID && format('-p {0}', vars.CURSEFORGE_PROJECT_ID) || '' }}
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build the zip only (run by hand)
+        if: github.event_name == 'workflow_dispatch'
+        uses: BigWigsMods/packager@01e8631a69c69d7654c788d152630d5fed9e3812   # v2.7.0
+        with:
+          args: -d
+
+      - name: Keep the zip with the run
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9   # v7.0.2
+        with:
+          name: GamepadReticleOnTarget
+          path: .release/*.zip
+          # The packager's folder starts with a dot, which upload-artifact skips unless told.
+          include-hidden-files: true
+          if-no-files-found: error

@@ -1,0 +1,17 @@
+## Interface: 16001
+## Title: Gamepad Reticle On Target
+## Notes: Puts the controller's reticle just below your target's nameplate, so it stays on what you attack. Settings in Options > AddOns > Gamepad Reticle On Target, or /grt.
+## Author: Artisan
+## Version: @project-version@
+## SavedVariables: GamepadReticleOnTargetDB, GamepadReticleOnTargetDebugDB
+## Category: Gamepad
+
+GamepadReticleOnTarget.lua
+Reticle.lua
+Popup.lua
+Nameplates.lua
+RelatedAddon.lua
+#@do-not-package@
+# /grt debug, the in-game test suite: not in the release zip (.pkgmeta)
+Debug.lua
+#@end-do-not-package@
