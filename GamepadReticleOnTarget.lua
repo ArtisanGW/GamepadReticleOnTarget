@@ -140,11 +140,11 @@ function ReticleOnTarget.RegisterSettings()
             .. "(\"<Stable Master>\").\n\nTurned off, the nameplate's own white name.", nil, refreshHiding)
         if type(initializer) == "table" and type(initializer.Indent) == "function" then initializer:Indent() end
     end
-    addHideSetting("hideNpcHealthBars", "Hide health bars", "the health bar and level", "friendly NPCs")
+    addHideSetting("hideNpcHealthBars", "Hide health bars", "the health bar", "friendly NPCs")
     addHideSetting("hideNpcNames", "Hide names", "the name", "friendly NPCs")
     addWorldNamesSetting("npcWorldNames", "friendly NPCs", "green")
     addHeading("Neutral NPC Nameplates")
-    addHideSetting("hideNeutralHealthBars", "Hide health bars", "the health bar and level", "neutral NPCs, critters too")
+    addHideSetting("hideNeutralHealthBars", "Hide health bars", "the health bar", "neutral NPCs, critters too")
     addHideSetting("hideNeutralNames", "Hide names", "the name", "neutral NPCs, critters too")
     addWorldNamesSetting("neutralWorldNames", "neutral NPCs", "yellow")
     addHeading("Friendly Player Minions")

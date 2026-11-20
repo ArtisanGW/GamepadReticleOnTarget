@@ -76,11 +76,11 @@ local function unitFrameOf(nameplate)
 end
 
 -- The parts that can be hidden, each a list of regions: the health bar with its
--- border (the UnitFrame's HealthBarsContainer, else the bar) and the level badge
--- beside the name; the name, and our title under it (NameplateNames.lua).
+-- border (the UnitFrame's HealthBarsContainer, else the bar); the name, and our
+-- title under it (NameplateNames.lua).
 local function partsOf(unitFrame)
     local parts = {
-        healthBar = { unitFrame.HealthBarsContainer or unitFrame.healthBar, unitFrame.PlayerLevelDiffFrame },
+        healthBar = { unitFrame.HealthBarsContainer or unitFrame.healthBar },
         name = { unitFrame.name, ReticleOnTarget.NameplateNames.Title(unitFrame) },
     }
     for _, regions in pairs(parts) do
