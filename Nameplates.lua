@@ -29,6 +29,10 @@ local function getCVar(name)
     return succeeded and value or nil
 end
 
+local function setCVar(name, value)
+    if C_CVar and C_CVar.SetCVar then pcall(C_CVar.SetCVar, name, value) else pcall(SetCVar, name, value) end
+end
+
 -- The nameplate settings that are off now: a list of { cvar, label }.
 function Nameplates.Missing()
     local missing = {}
@@ -53,10 +57,15 @@ local function labels(entries)
 end
 
 -- Turns the missing settings on, then checks they took; if not, "Reticle on
--- your target", which needs them, goes off.
+-- your target", which needs them, goes off. What each was before is kept in the
+-- saved settings (nameplatesBefore: { cvar = value }), so turning "Reticle on
+-- your target" off can put them back (Nameplates.PutBack).
 function Nameplates.TurnOn()
+    local settings = ReticleOnTarget.GetSettings()
+    if type(settings.nameplatesBefore) ~= "table" then settings.nameplatesBefore = {} end
     for _, entry in ipairs(Nameplates.Missing()) do
-        if C_CVar and C_CVar.SetCVar then pcall(C_CVar.SetCVar, entry[1], "1") else pcall(SetCVar, entry[1], "1") end
+        if settings.nameplatesBefore[entry[1]] == nil then settings.nameplatesBefore[entry[1]] = getCVar(entry[1]) end
+        setCVar(entry[1], "1")
     end
     local stillMissing = Nameplates.Missing()
     if #stillMissing > 0 then
@@ -86,6 +95,35 @@ function Nameplates.Ask()
             { text = "No thanks" },
         },
     })
+    return true
+end
+
+-- Puts back the nameplate settings this addon turned on, as they were before it
+-- did ("Reticle on your target" turned off). One you changed since (no longer
+-- on) is left as you set it. They can't be changed in a fight: then it's done
+-- once the fight is over, if the setting is still off. Returns whether it ran.
+local putBackAfterCombat
+function Nameplates.PutBack()
+    local settings = ReticleOnTarget.GetSettings()
+    local before = settings.nameplatesBefore
+    if type(before) ~= "table" or next(before) == nil then return false end
+    if InCombatLockdown() then
+        putBackAfterCombat = putBackAfterCombat or CreateFrame("Frame")
+        putBackAfterCombat:SetScript("OnEvent", function(self)
+            self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+            if not ReticleOnTarget.GetSettings().enabled then Nameplates.PutBack() end
+        end)
+        putBackAfterCombat:RegisterEvent("PLAYER_REGEN_ENABLED")
+        return false
+    end
+    local putBack = false
+    for cvar, value in pairs(before) do
+        if getCVar(cvar) == "1" then setCVar(cvar, value); putBack = true end
+    end
+    settings.nameplatesBefore = nil
+    if putBack then
+        print("|cff88ccffGamepad Reticle On Target|r put the nameplate settings it turned on back as they were.")
+    end
     return true
 end
 

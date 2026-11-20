@@ -39,10 +39,13 @@ ReticleOnTarget.Clamp = clamp
 function ReticleOnTarget.GetSettings()
     if type(GamepadReticleOnTargetDB) ~= "table" then GamepadReticleOnTargetDB = {} end
     local settings = GamepadReticleOnTargetDB
-    -- Saved keys this addon doesn't use: dropped (nameplatesAsked is its own
-    -- record that the nameplate question was asked, Nameplates.lua).
+    -- Saved keys this addon doesn't use: dropped. Its own records are kept
+    -- (Nameplates.lua): nameplatesAsked, that the nameplate question was asked,
+    -- and nameplatesBefore, the nameplate settings it turned on and their values before.
     for key in pairs(settings) do
-        if ReticleOnTarget.DEFAULTS[key] == nil and key ~= "nameplatesAsked" then settings[key] = nil end
+        if ReticleOnTarget.DEFAULTS[key] == nil and key ~= "nameplatesAsked" and key ~= "nameplatesBefore" then
+            settings[key] = nil
+        end
     end
     for key, defaultValue in pairs(ReticleOnTarget.DEFAULTS) do
         if settings[key] == nil then settings[key] = defaultValue end
@@ -102,7 +105,14 @@ function ReticleOnTarget.RegisterSettings()
         .. "your target's nameplate, so it stays on what you attack as you both move.\n\n"
         .. "• Your target first, else the controller's soft target\n"
         .. "• No target, or nameplates off: where the game aims\n\n"
-        .. "What the controller targets is still decided by the game.")
+        .. "What the controller targets is still decided by the game. Turned off, the nameplate settings "
+        .. "it turned on go back as they were, and any hidden health bars or names show again.",
+        nil, function()
+            ReticleOnTarget.Reticle.Place()
+            ReticleOnTarget.NameplateHiding.Refresh()
+            if ReticleOnTarget.GetSettings().enabled then ReticleOnTarget.Nameplates.Ask()
+            else ReticleOnTarget.Nameplates.PutBack() end
+        end)
     addSetting("offset", Settings.VarType.Number, "Vertical offset",
         "Moves the reticle up or down from just below your target's nameplate, in screen pixels.\n\n"
         .. "• Default: just below the nameplate\n"

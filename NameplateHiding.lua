@@ -53,8 +53,10 @@ end
 
 -- Whether a part ("healthBar" or "name") of a unit's nameplate should be hidden.
 function NameplateHiding.ShouldHide(unit, partName)
+    local settings = ReticleOnTarget.GetSettings()
+    if not settings.enabled then return false end   -- "Reticle on your target" off: the game's nameplates as they are
     local settingKeys = NameplateHiding.SETTINGS[NameplateHiding.Kind(unit)]
-    return settingKeys ~= nil and ReticleOnTarget.GetSettings()[settingKeys[partName]] == true
+    return settingKeys ~= nil and settings[settingKeys[partName]] == true
 end
 
 local function unitFrameOf(nameplate)
