@@ -98,7 +98,7 @@ local function checkReticle(label, offsetPixels)
         -- Anchored to a nameplate, the reticle can't be measured (a restricted
         -- region): the addon's own record of where it put it is checked instead.
         local placement = Reticle.Placement()
-        local anchor, _, baseHeight = Reticle.AnchorOf(nameplate)
+        local anchor, _, baseHeight = Reticle.AnchorOf(nameplate, select(2, Reticle.TargetNameplate()))
         expectEqual(name .. ": on the target's nameplate", true, placement ~= nil and placement.anchor == anchor)
         return expectNear(name .. ": height from the nameplate",
             baseHeight + Reticle.PixelsToFrameUnits(GamepadReticle, offsetPixels),

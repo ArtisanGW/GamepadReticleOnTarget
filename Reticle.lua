@@ -78,15 +78,36 @@ function Reticle.VisibleNameplatePart(nameplate)
     return nameplate
 end
 
+-- Whether a unit gives or takes a quest: the game's interaction icon for it is a
+-- quest one ("Crosshair_Quest_64", read with SetUnitCursorTexture on a hidden
+-- texture of ours). The game then draws its "!" or "?" in the world above the
+-- head, where the interaction icon's spot is: the reticle goes below the name.
+local questProbe
+function Reticle.HasQuestMarker(unit)
+    if type(SetUnitCursorTexture) ~= "function" then return false end
+    if not questProbe then
+        local holder = CreateFrame("Frame")
+        holder:Hide()
+        questProbe = holder:CreateTexture()
+    end
+    local succeeded, hasIcon = pcall(SetUnitCursorTexture, questProbe, unit, nil, nil, false)
+    if not (succeeded and hasIcon) then return false end
+    for _, method in ipairs({ "GetTexture", "GetAtlas" }) do
+        local name = type(questProbe[method]) == "function" and tostring(questProbe[method](questProbe)) or ""
+        if name:find("Quest", 1, true) then return true end
+    end
+    return false
+end
+
 -- Where the reticle goes on a nameplate: the spot of the game's own interaction
 -- icon (the UnitFrame's SoftTargetFrame, 24 by 24 just above the nameplate,
--- Blizzard_NamePlates.xml:261-265, forever branch), centered on it; else just
--- below the part of the nameplate you see. Returns the frame, its point and the
--- height from it.
-function Reticle.AnchorOf(nameplate)
+-- Blizzard_NamePlates.xml:261-265, forever branch), centered on it; for a unit
+-- with a quest marker, or without that frame, just below the part of the
+-- nameplate you see. Returns the frame, its point and the height from it.
+function Reticle.AnchorOf(nameplate, unit)
     local unitFrame = nameplate.UnitFrame
     local iconSpot = type(unitFrame) == "table" and unitFrame.SoftTargetFrame
-    if type(iconSpot) == "table" then return iconSpot, "CENTER", 0 end
+    if type(iconSpot) == "table" and not (unit and Reticle.HasQuestMarker(unit)) then return iconSpot, "CENTER", 0 end
     return Reticle.VisibleNameplatePart(nameplate), "BOTTOM", -Reticle.BELOW_NAMEPLATE
 end
 
@@ -115,9 +136,9 @@ function Reticle.Place()
         end
         return
     end
-    local nameplate = Reticle.TargetNameplate()
+    local nameplate, unit = Reticle.TargetNameplate()
     if nameplate then
-        local anchor, point, baseHeight = Reticle.AnchorOf(nameplate)
+        local anchor, point, baseHeight = Reticle.AnchorOf(nameplate, unit)
         local settings = ReticleOnTarget.GetSettings()
         local offsetPixels = ReticleOnTarget.Clamp(settings.offset, ReticleOnTarget.OFFSET_MIN, ReticleOnTarget.OFFSET_MAX, 0)
         local heightFromNameplate = baseHeight + Reticle.PixelsToFrameUnits(reticle, offsetPixels)
@@ -151,8 +172,18 @@ local function placeNextFrame()
     end)
 end
 
+-- The game's answer about a quest marker can come a moment after a target change:
+-- placed again this long after one.
+Reticle.PLACE_AGAIN_AFTER_TARGET_SECONDS = 0.1
 local eventFrame = CreateFrame("Frame")
-eventFrame:SetScript("OnEvent", function() placeNextFrame() end)
+eventFrame:SetScript("OnEvent", function(_, event)
+    placeNextFrame()
+    if event == "PLAYER_TARGET_CHANGED" then
+        C_Timer.After(Reticle.PLACE_AGAIN_AFTER_TARGET_SECONDS, function()
+            if shouldMove() then Reticle.Place() end
+        end)
+    end
+end)
 
 -- Called once the world is entered: listens for target and nameplate changes
 -- (each one checks the setting and the controller UI first, so a switch to the

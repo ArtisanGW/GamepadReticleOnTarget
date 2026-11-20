@@ -276,7 +276,7 @@ test("controller, a target: the reticle goes under its nameplate, re-placed only
     game.fire("PLAYER_TARGET_CHANGED"); frame()
     eq(GamepadReticle.point.relativeTo, targetPlate, "your target first")
     game.fire("PLAYER_TARGET_CHANGED"); game.fire("NAME_PLATE_UNIT_ADDED", "nameplate3")
-    eq(#game.timers, 1, "several reasons in one frame: placed once, on the next frame")
+    eq(#game.timers, 2, "several reasons in one frame: placed once on the next frame, and once more a moment after the target change")
     frame()
     game.nameplates.target = nil; game.nameplates.softenemy = nil
     game.fire("NAME_PLATE_UNIT_REMOVED", "nameplate1"); frame()
@@ -857,6 +857,24 @@ test("on a nameplate with the game's interaction icon frame: centered on it, the
     eq(GamepadReticle.point[2], "CENTER"); eq(GamepadReticle.point[4], 0, "right on it by default")
     set("offset", -30)
     near(GamepadReticle.point[4], -10, "30 px down from there")
+end)
+
+test("a quest giver (the game draws its \"!\" above the head): the reticle below the name, not on the icon spot", function()
+    boot(true, nil)
+    enterWorld()
+    local iconSpot, healthBar = { name = "SoftTargetFrame" }, { IsVisible = function() return true end }
+    local plate = { UnitFrame = { SoftTargetFrame = iconSpot, healthBar = healthBar } }
+    local cursorTexture
+    _G.SetUnitCursorTexture = function(texture) function texture:GetTexture() return cursorTexture end; return true end
+    game.units.target = true; game.nameplates.target = plate
+    cursorTexture = "Cursor Crosshair_Quest_64"
+    game.fire("PLAYER_TARGET_CHANGED"); frame()
+    eq(GamepadReticle.point.relativeTo, healthBar, "below the nameplate, clear of the \"!\"")
+    eq(GamepadReticle.point[2], "BOTTOM")
+    cursorTexture = "Cursor Crosshair_Trainer_64"
+    game.fire("PLAYER_TARGET_CHANGED"); frame()
+    eq(GamepadReticle.point.relativeTo, iconSpot, "a trainer: on the icon spot")
+    _G.SetUnitCursorTexture = nil
 end)
 
 reportLine(passed .. " passed, " .. failed .. " failed")
