@@ -4,9 +4,14 @@
 -- its title under it ("<Stable Master>"). Used when "World-style names" is
 -- ticked for its group (NameplateHiding.lua); otherwise the game's own look.
 --
--- The color is set again after each of the game's own name updates (a post-hook
--- on CompactUnitFrame_UpdateName), and the name's own color is put back when the
--- look ends. The title is our own text under the name, copied from the name's
+-- Its size is a percentage of the game's own nameplate name size (the game sets
+-- 16 times its nameplate size setting: NamePlateSetupOptions.healthBarFontHeight).
+-- The game's world names are drawn in the 3D world and shrink with distance;
+-- nameplate text keeps one size on screen, so this can match them at one distance.
+--
+-- The color and size are set again after each of the game's own name updates (a
+-- post-hook on CompactUnitFrame_UpdateName); the name's own color and size are put
+-- back when the look ends. The title is our own text under the name, copied from the name's
 -- font; the game's name is untouched otherwise.
 local ReticleOnTarget = _G.GamepadReticleOnTarget
 
@@ -16,6 +21,7 @@ ReticleOnTarget.NameplateNames = NameplateNames
 local styled = setmetatable({}, { __mode = "k" })        -- UnitFrame -> true while it has the look
 local nameColors = setmetatable({}, { __mode = "k" })    -- name -> { r, g, b } before we colored it
 local titles = setmetatable({}, { __mode = "k" })        -- UnitFrame -> our title text
+local sized = setmetatable({}, { __mode = "k" })         -- name -> true while we changed its height
 
 -- Secret values (hidden from addons in some situations) count as unknown.
 local function readable(value)
@@ -55,6 +61,35 @@ local function colorName(unitFrame, unit)
     return red, green, blue
 end
 
+-- The game's own height for nameplate names.
+local function gameNameHeight(name)
+    local options = _G.NamePlateSetupOptions
+    local height = type(options) == "table" and tonumber(options.healthBarFontHeight)
+    if height then return height end
+    local _, size = name:GetFont()
+    return tonumber(size)
+end
+
+-- Sets the name's height to percent of the game's (100: the game's own).
+local function sizeName(unitFrame, unit)
+    local name = unitFrame.name
+    if type(name.SetTextHeight) ~= "function" then return end
+    local height = gameNameHeight(name)
+    if not height then return end
+    local percent = ReticleOnTarget.NameplateHiding.NameSizePercent(unit)
+    if percent == 100 and not sized[name] then return end
+    sized[name] = percent ~= 100 or nil
+    name:SetTextHeight(height * percent / 100)
+end
+
+local function unsizeName(unitFrame)
+    local name = unitFrame.name
+    if not sized[name] then return end
+    sized[name] = nil
+    local height = gameNameHeight(name)
+    if height then name:SetTextHeight(height) end
+end
+
 local function titleOf(unitFrame)
     if not titles[unitFrame] then
         local title = unitFrame:CreateFontString(nil, "OVERLAY")
@@ -76,9 +111,11 @@ function NameplateNames.Style(unitFrame, unit, on)
             name:SetVertexColor(color[1], color[2], color[3])
         end
         if titles[unitFrame] then titles[unitFrame]:Hide() end
+        unsizeName(unitFrame)
         return
     end
     styled[unitFrame] = true
+    sizeName(unitFrame, unit)
     local red, green, blue = colorName(unitFrame, unit)
     local text = NameplateNames.TitleText(unit)
     if not text then
@@ -103,6 +140,9 @@ end
 -- ours after it.
 if type(hooksecurefunc) == "function" and type(CompactUnitFrame_UpdateName) == "function" then
     hooksecurefunc("CompactUnitFrame_UpdateName", function(frame)
-        if styled[frame] and type(frame.unit) == "string" then colorName(frame, frame.unit) end
+        if styled[frame] and type(frame.unit) == "string" then
+            sizeName(frame, frame.unit)
+            colorName(frame, frame.unit)
+        end
     end)
 end

@@ -17,9 +17,9 @@ local NameplateHiding = {
     NEUTRAL_REACTION = 4,
     -- The setting that hides each part, by kind of unit.
     SETTINGS = {
-        npc = { healthBar = "hideNpcHealthBars", name = "hideNpcNames" },
-        neutral = { healthBar = "hideNeutralHealthBars", name = "hideNeutralNames" },
-        minion = { healthBar = "hideMinionHealthBars", name = "hideMinionNames" },
+        npc = { healthBar = "hideNpcHealthBars", name = "hideNpcNames", level = "hideNpcLevels" },
+        neutral = { healthBar = "hideNeutralHealthBars", name = "hideNeutralNames", level = "hideNeutralLevels" },
+        minion = { healthBar = "hideMinionHealthBars", name = "hideMinionNames", level = "hideMinionLevels" },
     },
 }
 ReticleOnTarget.NameplateHiding = NameplateHiding
@@ -62,10 +62,18 @@ end
 -- Whether a unit's name gets the look of the game's world names: a friendly or
 -- neutral NPC, with "World-style names" ticked for its group.
 NameplateHiding.WORLD_NAME_SETTINGS = { npc = "npcWorldNames", neutral = "neutralWorldNames" }
+-- Their size, a percentage of the game's nameplate name size.
+NameplateHiding.NAME_SIZE_SETTINGS = { npc = "npcNameSize", neutral = "neutralNameSize" }
 function NameplateHiding.WorldNames(unit)
     local settings = ReticleOnTarget.GetSettings()
     local settingKey = NameplateHiding.WORLD_NAME_SETTINGS[NameplateHiding.Kind(unit)]
     return settings.enabled == true and settingKey ~= nil and settings[settingKey] == true
+end
+
+function NameplateHiding.NameSizePercent(unit)
+    local settingKey = NameplateHiding.NAME_SIZE_SETTINGS[NameplateHiding.Kind(unit)]
+    local percent = settingKey and tonumber(ReticleOnTarget.GetSettings()[settingKey])
+    return percent or 100
 end
 
 local function unitFrameOf(nameplate)
@@ -77,11 +85,13 @@ end
 
 -- The parts that can be hidden, each a list of regions: the health bar with its
 -- border (the UnitFrame's HealthBarsContainer, else the bar); the name, and our
--- title under it (NameplateNames.lua).
+-- title under it (NameplateNames.lua); the level beside the name (its badge, or
+-- the classic style's level frame).
 local function partsOf(unitFrame)
     local parts = {
         healthBar = { unitFrame.HealthBarsContainer or unitFrame.healthBar },
         name = { unitFrame.name, ReticleOnTarget.NameplateNames.Title(unitFrame) },
+        level = { unitFrame.PlayerLevelDiffFrame, unitFrame.LevelFrame },
     }
     for _, regions in pairs(parts) do
         for i = #regions, 1, -1 do

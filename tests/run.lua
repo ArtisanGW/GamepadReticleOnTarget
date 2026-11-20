@@ -197,6 +197,7 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     end }
     _G.LEVEL = "Level"
     _G.CompactUnitFrame_UpdateName = function() end
+    _G.NamePlateSetupOptions = { healthBarFontHeight = 16 }
     game.combat = false
     _G.InCombatLockdown = function() return game.combat end
     game.bindings, game.bindingOwners = {}, {}
@@ -587,6 +588,7 @@ local function addPlate(unit, kind, barAlpha)
         function region:GetVertexColor() return self.color[1], self.color[2], self.color[3] end
         function region:GetFont() return "font", 12, "" end
         function region:SetFont(font) self.font = font end
+        function region:SetTextHeight(height) self.height = height end
         function region:SetText(text) self.text = text end
         function region:SetPoint() end
         function region:Show() self.shown = true end
@@ -698,9 +700,9 @@ test("laid out as the game's Nameplates options: a heading per group, its boxes 
         if row.heading then rows[#rows + 1] = "# " .. row.heading
         elseif row.checkbox then rows[#rows + 1] = (row.indented and "  " or "") .. row.checkbox end
     end
-    eq(table.concat(rows, ", "), "enabled, # Friendly NPC Nameplates,   hideNpcHealthBars,   hideNpcNames,   npcWorldNames, "
-        .. "# Neutral NPC Nameplates,   hideNeutralHealthBars,   hideNeutralNames,   neutralWorldNames, "
-        .. "# Friendly Player Minions,   hideMinionHealthBars,   hideMinionNames")
+    eq(table.concat(rows, ", "), "enabled, # Friendly NPC Nameplates,   hideNpcHealthBars,   hideNpcNames,   hideNpcLevels, "
+        .. "  npcWorldNames, # Neutral NPC Nameplates,   hideNeutralHealthBars,   hideNeutralNames,   hideNeutralLevels, "
+        .. "  neutralWorldNames, # Friendly Player Minions,   hideMinionHealthBars,   hideMinionNames,   hideMinionLevels")
     eq(game.settings.GamepadReticleOnTarget_hideMinionNames ~= nil, true)
 end)
 
@@ -815,6 +817,33 @@ test("off by default, and minions keep the game's name look", function()
     enterWorld()
     local minion = addPlate("nameplate2", FRIENDLY_MINION)
     eq(table.concat(minion.name.color, " "), "1 1 1"); eq(minion.title, nil)
+end)
+
+test("Hide level: the level beside the name, per group, off by default", function()
+    boot(true, nil, false, allNameplatesOn)
+    enterWorld()
+    eq(GamepadReticleOnTargetDB.hideNpcLevels, false); eq(GamepadReticleOnTargetDB.hideMinionLevels, false)
+    local npc, minion = addPlate("nameplate1", FRIENDLY_NPC), addPlate("nameplate2", FRIENDLY_MINION)
+    set("hideNpcLevels", true)
+    eq(npc.PlayerLevelDiffFrame.alpha, 0); eq(npc.HealthBarsContainer.alpha, 1, "the bar kept"); eq(npc.name.alpha, 1)
+    eq(minion.PlayerLevelDiffFrame.alpha, 1, "minions: their own box")
+    set("hideMinionLevels", true)
+    eq(minion.PlayerLevelDiffFrame.alpha, 0)
+end)
+
+test("Name size: world-style names at a percentage of the game's nameplate name size; Default and off give the game's back", function()
+    boot(true, { npcWorldNames = true }, false, allNameplatesOn)
+    enterWorld()
+    eq(game.options.npcNameSize.format(100), "Default"); eq(game.options.npcNameSize.format(150), "150%")
+    local npc = addPlate("nameplate1", FRIENDLY_NPC)
+    eq(npc.name.height, nil, "Default: the game's height untouched")
+    set("npcNameSize", 150)
+    eq(npc.name.height, 24, "150% of the game's 16")
+    set("npcNameSize", 100)
+    eq(npc.name.height, 16, "back to the game's")
+    set("npcNameSize", 125)
+    set("npcWorldNames", false)
+    eq(npc.name.height, 16, "World-style names off: the game's size back")
 end)
 
 reportLine(passed .. " passed, " .. failed .. " failed")

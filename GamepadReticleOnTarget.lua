@@ -24,11 +24,16 @@ local ReticleOnTarget = {
     --          (NameplateHiding.lua); hideNeutralHealthBars, hideNeutralNames too.
     -- npcWorldNames, neutralWorldNames: their names drawn as the game's world names,
     --          colored and with their title (NameplateNames.lua), not the nameplate's white.
+    -- hideNpcLevels, hideNeutralLevels, hideMinionLevels: the level beside the name hidden.
+    -- npcNameSize, neutralNameSize: world-style names' size, 50 to 200% of the game's
+    --          (100, the game's own, by default).
     --          Off by default: the addon never changes how the game looks unless asked.
     DEFAULTS = { enabled = true, offset = 0, hideNpcHealthBars = false, hideNpcNames = false,
         hideNeutralHealthBars = false, hideNeutralNames = false, npcWorldNames = false, neutralWorldNames = false,
+        hideNpcLevels = false, hideNeutralLevels = false, hideMinionLevels = false, npcNameSize = 100, neutralNameSize = 100,
         hideMinionHealthBars = false, hideMinionNames = false },
     OFFSET_MIN = -200, OFFSET_MAX = 200, OFFSET_STEP = 5,
+    NAME_SIZE_MIN = 50, NAME_SIZE_MAX = 200, NAME_SIZE_STEP = 5,
 }
 _G.GamepadReticleOnTarget = ReticleOnTarget
 
@@ -140,16 +145,32 @@ function ReticleOnTarget.RegisterSettings()
             .. "(\"<Stable Master>\").\n\nTurned off, the nameplate's own white name.", nil, refreshHiding)
         if type(initializer) == "table" and type(initializer.Indent) == "function" then initializer:Indent() end
     end
+    local function addNameSizeSetting(key, whose)
+        local initializer = addSetting(key, Settings.VarType.Number, "Name size",
+            "The size of " .. whose .. "' world-style names, from the game's own nameplate name size.\n\n"
+            .. "The game's world names shrink with distance; these keep one size, like all nameplate text.",
+            sliderOptions(ReticleOnTarget.NAME_SIZE_MIN, ReticleOnTarget.NAME_SIZE_MAX, ReticleOnTarget.NAME_SIZE_STEP,
+                function(value)
+                    local percent = math.floor((tonumber(value) or 100) + 0.5)
+                    return percent == 100 and "Default" or (percent .. "%")
+                end), refreshHiding)
+        if type(initializer) == "table" and type(initializer.Indent) == "function" then initializer:Indent() end
+    end
     addHideSetting("hideNpcHealthBars", "Hide health bars", "the health bar", "friendly NPCs")
     addHideSetting("hideNpcNames", "Hide names", "the name", "friendly NPCs")
+    addHideSetting("hideNpcLevels", "Hide level", "the level", "friendly NPCs")
     addWorldNamesSetting("npcWorldNames", "friendly NPCs", "green")
+    addNameSizeSetting("npcNameSize", "friendly NPCs")
     addHeading("Neutral NPC Nameplates")
     addHideSetting("hideNeutralHealthBars", "Hide health bars", "the health bar", "neutral NPCs, critters too")
     addHideSetting("hideNeutralNames", "Hide names", "the name", "neutral NPCs, critters too")
+    addHideSetting("hideNeutralLevels", "Hide level", "the level", "neutral NPCs, critters too")
     addWorldNamesSetting("neutralWorldNames", "neutral NPCs", "yellow")
+    addNameSizeSetting("neutralNameSize", "neutral NPCs")
     addHeading("Friendly Player Minions")
     addHideSetting("hideMinionHealthBars", "Hide health bars", "the health bar", "friendly players' minions (pets, guardians, totems, yours too)")
     addHideSetting("hideMinionNames", "Hide names", "the name", "friendly players' minions (pets, guardians, totems, yours too)")
+    addHideSetting("hideMinionLevels", "Hide level", "the level", "friendly players' minions (pets, guardians, totems, yours too)")
 
     if ReticleOnTarget.AddNameplatesButton then ReticleOnTarget.AddNameplatesButton(layout) end   -- Nameplates.lua
     if ReticleOnTarget.AddRelatedAddonButtons then ReticleOnTarget.AddRelatedAddonButtons(layout) end   -- RelatedAddons.lua
