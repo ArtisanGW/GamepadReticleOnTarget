@@ -3,7 +3,12 @@
 ## Notes: Puts the controller's reticle just below your target's nameplate, so it stays on what you attack. Settings in Options > AddOns > Gamepad Reticle On Target, or /grt.
 ## Author: Artisan
 ## Version: @project-version@
+#@debug@
 ## SavedVariables: GamepadReticleOnTargetDB, GamepadReticleOnTargetDebugDB
+#@end-debug@
+#@non-debug@
+# ## SavedVariables: GamepadReticleOnTargetDB
+#@end-non-debug@
 ## Category: Gamepad
 ## IconTexture: Interface\AddOns\GamepadReticleOnTarget\Media\icon-64.png
 
