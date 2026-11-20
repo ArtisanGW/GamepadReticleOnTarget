@@ -846,5 +846,18 @@ test("Name size: world-style names at a percentage of the game's nameplate name 
     eq(npc.name.height, 16, "World-style names off: the game's size back")
 end)
 
+test("on a nameplate with the game's interaction icon frame: centered on it, the offset from there", function()
+    boot(true, nil)
+    enterWorld()
+    local iconSpot = { name = "SoftTargetFrame" }
+    local plate = { UnitFrame = { SoftTargetFrame = iconSpot } }
+    game.units.target = true; game.nameplates.target = plate
+    game.fire("PLAYER_TARGET_CHANGED"); frame()
+    eq(GamepadReticle.point.relativeTo, iconSpot, "where the game shows its icon")
+    eq(GamepadReticle.point[2], "CENTER"); eq(GamepadReticle.point[4], 0, "right on it by default")
+    set("offset", -30)
+    near(GamepadReticle.point[4], -10, "30 px down from there")
+end)
+
 reportLine(passed .. " passed, " .. failed .. " failed")
 os.exit(failed == 0 and 0 or 1)

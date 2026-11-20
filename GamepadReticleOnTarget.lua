@@ -108,8 +108,8 @@ function ReticleOnTarget.RegisterSettings()
     end
 
     addSetting("enabled", Settings.VarType.Boolean, "Reticle on your target",
-        "With the controller UI on, puts its reticle (and its auto-attack timer) just below "
-        .. "your target's nameplate, so it stays on what you attack as you both move.\n\n"
+        "With the controller UI on, puts its reticle (and its auto-attack timer) on your target's "
+        .. "nameplate, where the game shows its interaction icon, so it stays on what you attack as you both move.\n\n"
         .. "• Your target first, else the controller's soft target\n"
         .. "• No target, or nameplates off: where the game aims\n\n"
         .. "What the controller targets is still decided by the game. Turned off, the nameplate settings "
@@ -121,8 +121,8 @@ function ReticleOnTarget.RegisterSettings()
             else ReticleOnTarget.Nameplates.PutBack() end
         end)
     addSetting("offset", Settings.VarType.Number, "Vertical offset",
-        "Moves the reticle up or down from just below your target's nameplate, in screen pixels.\n\n"
-        .. "• Default: just below the nameplate\n"
+        "Moves the reticle up or down from where the game shows its interaction icon on your target, in screen pixels.\n\n"
+        .. "• Default: on that icon, just above the nameplate\n"
         .. "• No target: where the game aims",
         sliderOptions(ReticleOnTarget.OFFSET_MIN, ReticleOnTarget.OFFSET_MAX, ReticleOnTarget.OFFSET_STEP,
             ReticleOnTarget.OffsetLabel))

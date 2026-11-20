@@ -5,8 +5,9 @@
 -- switch to the controller (GamepadReticleMixin:Recenter, forever branch
 -- Blizzard_Gamepad/UI/Reticle/GamepadReticle.lua:22-26).
 --
--- With a target (yours, or else the controller's soft target), the dot goes just
--- below the target's nameplate: anchored to it, so the game moves it with the
+-- With a target (yours, or else the controller's soft target), the dot goes where
+-- the game shows its interaction icon on the target's nameplate, just above it
+-- (else just below the nameplate): anchored to it, so the game moves it with the
 -- target and nothing here runs per frame. It's placed again only when the target
 -- changes or a nameplate comes or goes. With no target, or no nameplate (they're
 -- off, or the target is off screen), it stays where the game aims. The vertical
@@ -15,7 +16,7 @@
 local ReticleOnTarget = _G.GamepadReticleOnTarget
 
 local Reticle = {
-    -- This far below the nameplate, in UI units.
+    -- Without the interaction icon's frame: this far below the nameplate, in UI units.
     BELOW_NAMEPLATE = 12,
     -- Whose nameplate it goes on: your target, friendly or not, or with no target
     -- the controller's soft target (what it would attack). With a target selected
@@ -77,6 +78,18 @@ function Reticle.VisibleNameplatePart(nameplate)
     return nameplate
 end
 
+-- Where the reticle goes on a nameplate: the spot of the game's own interaction
+-- icon (the UnitFrame's SoftTargetFrame, 24 by 24 just above the nameplate,
+-- Blizzard_NamePlates.xml:261-265, forever branch), centered on it; else just
+-- below the part of the nameplate you see. Returns the frame, its point and the
+-- height from it.
+function Reticle.AnchorOf(nameplate)
+    local unitFrame = nameplate.UnitFrame
+    local iconSpot = type(unitFrame) == "table" and unitFrame.SoftTargetFrame
+    if type(iconSpot) == "table" then return iconSpot, "CENTER", 0 end
+    return Reticle.VisibleNameplatePart(nameplate), "BOTTOM", -Reticle.BELOW_NAMEPLATE
+end
+
 -- The reticle's unit: the first of TARGET_UNITS that exists. Then its nameplate,
 -- if it has one, and the unit.
 function Reticle.TargetNameplate()
@@ -104,12 +117,12 @@ function Reticle.Place()
     end
     local nameplate = Reticle.TargetNameplate()
     if nameplate then
-        local anchor = Reticle.VisibleNameplatePart(nameplate)
+        local anchor, point, baseHeight = Reticle.AnchorOf(nameplate)
         local settings = ReticleOnTarget.GetSettings()
         local offsetPixels = ReticleOnTarget.Clamp(settings.offset, ReticleOnTarget.OFFSET_MIN, ReticleOnTarget.OFFSET_MAX, 0)
-        local heightFromNameplate = -Reticle.BELOW_NAMEPLATE + Reticle.PixelsToFrameUnits(reticle, offsetPixels)
+        local heightFromNameplate = baseHeight + Reticle.PixelsToFrameUnits(reticle, offsetPixels)
         reticle:ClearAllPoints()
-        reticle:SetPoint("CENTER", anchor, "BOTTOM", 0, heightFromNameplate)
+        reticle:SetPoint("CENTER", anchor, point, 0, heightFromNameplate)
         placedOn = "nameplate"
         placement = { anchor = anchor, height = heightFromNameplate }
         return
