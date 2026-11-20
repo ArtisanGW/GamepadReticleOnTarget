@@ -14,11 +14,34 @@ local RelatedAddon = {
 }
 ReticleOnTarget.RelatedAddon = RelatedAddon
 
+-- Whether it's turned off for this character in the AddOns list: first whether
+-- it can load (GetAddOnInfo's reason "DISABLED"), then its switch for this
+-- character (GetAddOnEnableState, 0 = off; the character is its GUID, as the
+-- game's AddOns list uses).
+function RelatedAddon.TurnedOff()
+    local addOns = _G.C_AddOns
+    if type(addOns) ~= "table" then return false end
+    if type(addOns.GetAddOnInfo) == "function" then
+        local succeeded, _, _, _, _, reason = pcall(addOns.GetAddOnInfo, RelatedAddon.NAME)
+        if succeeded and reason == "DISABLED" then return true end
+    end
+    if type(addOns.GetAddOnEnableState) == "function" then
+        local character = type(UnitGUID) == "function" and UnitGUID("player") or nil
+        local succeeded, state = pcall(addOns.GetAddOnEnableState, RelatedAddon.NAME, character)
+        if succeeded and tonumber(state) == 0 then return true end
+    end
+    return false
+end
+
+-- Whether it's installed. Debug.lua (never in the release) sets
+-- RelatedAddon.countTurnedOffAsMissing, so turning it off in the AddOns list
+-- shows what players without it see: the button and its popup.
 function RelatedAddon.Installed()
     local addOns = _G.C_AddOns
     if type(addOns) ~= "table" or type(addOns.DoesAddOnExist) ~= "function" then return false end
     local succeeded, exists = pcall(addOns.DoesAddOnExist, RelatedAddon.NAME)
-    return succeeded and exists == true
+    if not (succeeded and exists == true) then return false end
+    return not (RelatedAddon.countTurnedOffAsMissing and RelatedAddon.TurnedOff())
 end
 
 -- Its link to copy, and a Reload for once it's installed (Popup.lua).

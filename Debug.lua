@@ -14,6 +14,11 @@ local Reticle = ReticleOnTarget.Reticle
 local Debug = { SECONDS_BETWEEN_STEPS = 0.6, RUNS_KEPT = 10 }
 ReticleOnTarget.Debug = Debug
 
+-- Debug builds only: the other addon turned off in the AddOns list counts as
+-- missing, so its "Get" button and popup show as players without it see them
+-- (RelatedAddon.lua).
+if ReticleOnTarget.RelatedAddon then ReticleOnTarget.RelatedAddon.countTurnedOffAsMissing = true end
+
 local SETTING_KEYS = { "enabled", "offset" }
 
 local function say(text) print("|cff88ccffgrt debug|r " .. text) end

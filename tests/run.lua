@@ -17,7 +17,16 @@ local game
 -- refuse = true: the game won't take a change to them.
 local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     nameplateOptions = nameplateOptions or {}
-    _G.C_AddOns = { DoesAddOnExist = function(name) return nameplateOptions.customizerInstalled == true and name == "GamepadReticleCustomizer" end }
+    _G.C_AddOns = {
+        DoesAddOnExist = function(name)
+            return name == "GamepadReticleCustomizer" and (nameplateOptions.customizerInstalled == true or nameplateOptions.customizerOff == true)
+        end,
+        -- Turned off: as the game, GetAddOnInfo's reason says so.
+        GetAddOnInfo = function(name)
+            if name == "GamepadReticleCustomizer" and nameplateOptions.customizerOff then return name, name, "", false, "DISABLED", "INSECURE" end
+            return name, name, "", true, "", "INSECURE"
+        end,
+    }
     game = { saved = {}, temp = {}, timers = {}, frames = {}, settings = {}, callbacks = {}, events = 0 }
     game.saved.nameplateShowEnemies = nameplateOptions.enemies or "0"
     game.saved.nameplateShowFriendlyPlayers = nameplateOptions.friends or "0"
@@ -503,6 +512,18 @@ test("its icon in the AddOns list: Media/icon-64.png, shipped", function()
     eq(toc:match("## IconTexture: ([^\n]+)"), "Interface\\AddOns\\GamepadReticleOnTarget\\Media\\icon-64.png")
     eq(readFile("Media/icon-64.png"):sub(2, 4), "PNG", "a PNG file")
     eq(readFile(".pkgmeta"):find("- Media/icon-64.png", 1, true), nil, "not left out of the release")
+end)
+
+test("debug build: Gamepad Reticle Customizer turned off counts as missing, to see its button; the release doesn't", function()
+    local function button()
+        for _, initializer in ipairs(game.buttons) do if initializer.name == "Gamepad Reticle Customizer" then return initializer end end
+    end
+    boot(true, nil, false, { customizerOff = true })
+    eq(button() ~= nil, true, "turned off: the button, as players without it see it")
+    boot(true, nil, true, { customizerOff = true })
+    eq(button(), nil, "the release: installed is installed")
+    boot(true, nil, false, { customizerInstalled = true })
+    eq(button(), nil, "debug build, turned on: no button")
 end)
 
 reportLine(passed .. " passed, " .. failed .. " failed")
