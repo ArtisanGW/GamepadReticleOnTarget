@@ -497,5 +497,13 @@ test("without Debug.lua (the release), the addon works and /grt debug opens the 
     eq(game.opened, 42)
 end)
 
+test("its icon in the AddOns list: Media/icon-64.png, shipped", function()
+    local function readFile(path) local file = assert(io.open(path, "rb")); local text = file:read("*a"); file:close(); return text end
+    local toc = readFile("GamepadReticleOnTarget.toc"):gsub("\r", "")
+    eq(toc:match("## IconTexture: ([^\n]+)"), "Interface\\AddOns\\GamepadReticleOnTarget\\Media\\icon-64.png")
+    eq(readFile("Media/icon-64.png"):sub(2, 4), "PNG", "a PNG file")
+    eq(readFile(".pkgmeta"):find("- Media/icon-64.png", 1, true), nil, "not left out of the release")
+end)
+
 reportLine(passed .. " passed, " .. failed .. " failed")
 os.exit(failed == 0 and 0 or 1)

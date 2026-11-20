@@ -5,6 +5,7 @@
 ## Version: @project-version@
 ## SavedVariables: GamepadReticleOnTargetDB, GamepadReticleOnTargetDebugDB
 ## Category: Gamepad
+## IconTexture: Interface\AddOns\GamepadReticleOnTarget\Media\icon-64.png
 
 GamepadReticleOnTarget.lua
 Reticle.lua
