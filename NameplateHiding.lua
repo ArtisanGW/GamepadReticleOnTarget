@@ -1,10 +1,10 @@
--- Hides the nameplates that only clutter the screen: friendly NPCs', and the pets
--- of friendly players (yours too), each with its own setting. The reticle needs a
--- nameplate to sit under, so they stay on; only what they show is made
--- see-through (the alpha of the nameplate's UnitFrame), and the game's nameplate
--- keeps working underneath. The alpha each had is kept and put back when its
--- setting is turned off or the nameplate goes to another unit. Nothing here is
--- protected, so it works in combat too.
+-- Names only, without health bars, on the nameplates of friendly NPCs and of
+-- friendly players' pets (yours too), each with its own setting, off by default.
+-- The reticle needs a nameplate to sit under, so they stay on; only the health
+-- bar is made see-through (the alpha of the UnitFrame's HealthBarsContainer), and
+-- the game's nameplate keeps working underneath. The alpha it had is kept and put
+-- back when its setting is turned off or the nameplate goes to another unit.
+-- Nothing here is protected, so it works in combat too.
 --
 -- Nameplates the game locks for addons (friendly ones in dungeons and raids)
 -- aren't returned to addons at all: those are left as they are.
@@ -16,7 +16,7 @@ local NameplateHiding = {
 }
 ReticleOnTarget.NameplateHiding = NameplateHiding
 
-local originalAlphas = setmetatable({}, { __mode = "k" })   -- UnitFrame -> its alpha before we hid it
+local originalAlphas = setmetatable({}, { __mode = "k" })   -- health bar -> its alpha before we hid it
 
 -- Secret values (hidden from addons in some situations) count as unknown.
 local function readable(value)
@@ -30,7 +30,7 @@ local function isFriendly(unit)
     return reaction ~= nil and reaction >= NameplateHiding.FRIENDLY_REACTION
 end
 
--- What kind of unit a nameplate shows, for hiding: "npc" (a friendly NPC), "pet"
+-- What kind of unit a nameplate shows: "npc" (a friendly NPC), "pet"
 -- (a friendly player's pet or guardian) or nil (anything else: players, enemies,
 -- neutral NPCs).
 function NameplateHiding.Kind(unit)
@@ -44,26 +44,36 @@ end
 function NameplateHiding.ShouldHide(unit)
     local settings = ReticleOnTarget.GetSettings()
     local kind = NameplateHiding.Kind(unit)
-    return (kind == "npc" and settings.hideFriendlyNpcs == true) or (kind == "pet" and settings.hidePets == true)
+    return (kind == "npc" and settings.npcNamesOnly == true) or (kind == "pet" and settings.petNamesOnly == true)
 end
 
 local function unitFrameOf(nameplate)
     local unitFrame = type(nameplate) == "table" and nameplate.UnitFrame
-    if type(unitFrame) ~= "table" or type(unitFrame.SetAlpha) ~= "function" then return nil end
+    if type(unitFrame) ~= "table" then return nil end
     if type(unitFrame.IsForbidden) == "function" and unitFrame:IsForbidden() then return nil end
     return unitFrame
 end
 
+-- The health bar and its border: the UnitFrame's HealthBarsContainer, else the bar.
+local function healthBarOf(unitFrame)
+    local healthBar = unitFrame.HealthBarsContainer or unitFrame.healthBar
+    if type(healthBar) ~= "table" or type(healthBar.SetAlpha) ~= "function" then return nil end
+    return healthBar
+end
+
 local function hide(unitFrame)
-    if originalAlphas[unitFrame] == nil then originalAlphas[unitFrame] = unitFrame:GetAlpha() end
-    unitFrame:SetAlpha(0)
+    local healthBar = healthBarOf(unitFrame)
+    if not healthBar then return end
+    if originalAlphas[healthBar] == nil then originalAlphas[healthBar] = healthBar:GetAlpha() end
+    healthBar:SetAlpha(0)
 end
 
 local function show(unitFrame)
-    local alpha = originalAlphas[unitFrame]
+    local healthBar = healthBarOf(unitFrame)
+    local alpha = healthBar and originalAlphas[healthBar]
     if alpha == nil then return end
-    originalAlphas[unitFrame] = nil
-    unitFrame:SetAlpha(alpha)
+    originalAlphas[healthBar] = nil
+    healthBar:SetAlpha(alpha)
 end
 
 -- Hides or shows one unit's nameplate, as its setting says.

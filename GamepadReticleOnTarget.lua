@@ -7,7 +7,7 @@
 --   Reticle.lua                  where the reticle goes, and when it's placed again
 --   Popup.lua                    a popup in the game's style
 --   Nameplates.lua               asks to turn on the nameplates the reticle sits under
---   NameplateHiding.lua          makes friendly NPCs' and pets' nameplates see-through
+--   NameplateHiding.lua          names only on friendly NPCs' and pets' nameplates
 --   RelatedAddons.lua             hints for our other controller addons
 --   Debug.lua                    /grt debug, the in-game test suite (not in the release)
 local ADDON_NAME = ...
@@ -18,8 +18,10 @@ local ReticleOnTarget = {
     --          (up) screen pixels. Pixels, not a percentage: a nameplate keeps its
     --          size on screen at any distance, so a pixel offset puts the dot at the
     --          same place on it.
-    -- hideFriendlyNpcs, hidePets: their nameplates see-through (NameplateHiding.lua).
-    DEFAULTS = { enabled = true, offset = 0, hideFriendlyNpcs = true, hidePets = true },
+    -- npcNamesOnly, petNamesOnly: friendly NPCs' and pets' nameplates show their
+    --          name without the health bar (NameplateHiding.lua). Off by default: the
+    --          addon never changes how the game looks unless asked.
+    DEFAULTS = { enabled = true, offset = 0, npcNamesOnly = false, petNamesOnly = false },
     OFFSET_MIN = -200, OFFSET_MAX = 200, OFFSET_STEP = 5,
 }
 _G.GamepadReticleOnTarget = ReticleOnTarget
@@ -95,13 +97,12 @@ function ReticleOnTarget.RegisterSettings()
         sliderOptions(ReticleOnTarget.OFFSET_MIN, ReticleOnTarget.OFFSET_MAX, ReticleOnTarget.OFFSET_STEP,
             ReticleOnTarget.OffsetLabel))
     local function refreshHiding() ReticleOnTarget.NameplateHiding.Refresh() end
-    addSetting("hideFriendlyNpcs", Settings.VarType.Boolean, "Hide friendly NPCs",
-        "Makes friendly NPCs' nameplates see-through. The reticle still goes on them.\n\n"
-        .. "Turned off, they show again.", nil, refreshHiding)
-    addSetting("hidePets", Settings.VarType.Boolean, "Hide friendly pets",
-        "Makes the nameplates of friendly players' pets see-through, yours too. "
-        .. "The reticle still goes on them.\n\n"
-        .. "Turned off, they show again.", nil, refreshHiding)
+    addSetting("npcNamesOnly", Settings.VarType.Boolean, "NPC names only",
+        "Friendly NPCs' nameplates show their name, without the health bar.\n\n"
+        .. "The reticle still goes on them. Turned off, the bars show again.", nil, refreshHiding)
+    addSetting("petNamesOnly", Settings.VarType.Boolean, "Pet names only",
+        "The nameplates of friendly players' pets, yours too, show their name, without the health bar.\n\n"
+        .. "The reticle still goes on them. Turned off, the bars show again.", nil, refreshHiding)
 
     if ReticleOnTarget.AddNameplatesButton then ReticleOnTarget.AddNameplatesButton(layout) end   -- Nameplates.lua
     if ReticleOnTarget.AddRelatedAddonButtons then ReticleOnTarget.AddRelatedAddonButtons(layout) end   -- RelatedAddons.lua
