@@ -18,6 +18,7 @@ local Nameplates = {
         { "nameplateShowFriendlyPlayers", "friendly player nameplates" },
         { "nameplateShowFriendlyClassColor", "class colors on friendly player nameplates" },
         { "nameplateShowFriendlyNpcs", "friendly NPC nameplates" },
+        { "nameplateShowFriendlyPlayerMinions", "friendly player minions (pets, guardians, totems)" },
     },
 }
 ReticleOnTarget.Nameplates = Nameplates
@@ -113,7 +114,8 @@ function ReticleOnTarget.AddNameplatesButton(layout)
         .. "• Enemy nameplates\n"
         .. "• Friendly player nameplates\n"
         .. "• Class colors on friendly ones\n"
-        .. "• Friendly NPC nameplates\n\n"
+        .. "• Friendly NPC nameplates\n"
+        .. "• Friendly player minions\n\n"
         .. "Asks before turning on any that are off.", true)
     layout:AddInitializer(initializer)
 end

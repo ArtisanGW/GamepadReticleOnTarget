@@ -32,6 +32,7 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     game.saved.nameplateShowFriendlyPlayers = nameplateOptions.friends or "0"
     game.saved.nameplateShowFriendlyClassColor = nameplateOptions.classColors or "0"
     game.saved.nameplateShowFriendlyNpcs = nameplateOptions.npcs or "0"
+    game.saved.nameplateShowFriendlyPlayerMinions = nameplateOptions.minions or "0"
     local function fire(event, ...)
         for _, f in ipairs(game.frames) do if f.ev[event] and f.script then f.script(f, event, ...) end end
     end
@@ -347,7 +348,7 @@ end
 local function nameplatesBox() local frame = popup(); return frame and frame.text.label:find("nameplate", 1, true) and frame or nil end
 local function nameplateValues()
     return game.saved.nameplateShowEnemies .. game.saved.nameplateShowFriendlyPlayers .. game.saved.nameplateShowFriendlyClassColor
-        .. game.saved.nameplateShowFriendlyNpcs
+        .. game.saved.nameplateShowFriendlyNpcs .. game.saved.nameplateShowFriendlyPlayerMinions
 end
 
 test("first launch: a box says which nameplate settings are off; Turn on turns those on; asked once", function()
@@ -355,13 +356,13 @@ test("first launch: a box says which nameplate settings are off; Turn on turns t
     enterWorld()
     local box = nameplatesBox()
     eq(box and box.shown, true, "the box")
-    eq(box.text.label:find("• friendly player nameplates\n• class colors on friendly player nameplates\n• friendly NPC nameplates", 1, true) ~= nil, true,
+    eq(box.text.label:find("• friendly player nameplates\n• class colors on friendly player nameplates\n• friendly NPC nameplates\n• friendly player minions (pets, guardians, totems)", 1, true) ~= nil, true,
         "names the two that are off: " .. box.text.label)
     eq(box.text.label:find("enemy nameplates", 1, true), nil, "not the one already on")
-    eq(nameplateValues(), "1000", "nothing changed before the click")
+    eq(nameplateValues(), "10000", "nothing changed before the click")
     eq(popupButtons(), "No thanks, Turn on"); eq(box.Border.template, "DialogBorderTemplate", "the game's dialog border")
     clickPopup("Turn on")
-    eq(nameplateValues(), "1111", "turned on")
+    eq(nameplateValues(), "11111", "turned on")
     eq(GamepadReticleOnTargetDB.nameplatesAsked, true)
     boot(true, GamepadReticleOnTargetDB, false, { enemies = "1" })
     enterWorld()
@@ -374,7 +375,7 @@ test("on the controller: A turns the nameplates on, B says no; closing gives the
     eq(game.bindings.PAD1, "GamepadReticleOnTargetPopupButton1", "A: Turn on")
     eq(game.bindings.PAD2, "GamepadReticleOnTargetPopupButton2", "B: No thanks")
     _G[game.bindings.PAD1]:Click()
-    eq(nameplateValues(), "1111", "turned on with A")
+    eq(nameplateValues(), "11111", "turned on with A")
     eq(game.bindings.PAD1, nil, "given back"); eq(game.bindings.PAD2, nil)
 end)
 
@@ -382,7 +383,7 @@ test("No thanks changes nothing; the settings page's button asks again", functio
     boot(true, nil)
     enterWorld()
     clickPopup("No thanks")
-    eq(nameplateValues(), "0000", "nothing changed")
+    eq(nameplateValues(), "00000", "nothing changed")
     eq(GamepadReticleOnTargetDB.enabled, true, "the setting kept")
     local button
     for _, initializer in ipairs(game.buttons) do if initializer.name == "Nameplates" then button = initializer end end
@@ -393,7 +394,7 @@ test("No thanks changes nothing; the settings page's button asks again", functio
 end)
 
 test("no box or row when the nameplates are on; no box when turned off", function()
-    boot(true, nil, false, { enemies = "1", friends = "1", classColors = "1", npcs = "1" })
+    boot(true, nil, false, { enemies = "1", friends = "1", classColors = "1", npcs = "1", minions = "1" })
     enterWorld()
     eq(nameplatesBox(), nil, "all on")
     for _, initializer in ipairs(game.buttons) do eq(initializer.name ~= "Nameplates", true, "all on: no row") end
@@ -416,7 +417,7 @@ test("if the game won't take the nameplate settings, Reticle on your target goes
     boot(true, nil, false, { refuse = true })
     enterWorld()
     clickPopup("Turn on")
-    eq(nameplateValues(), "0000")
+    eq(nameplateValues(), "00000")
     eq(GamepadReticleOnTargetDB.enabled, false, "the setting that needs them, off")
     eq(game.printed[#game.printed]:find("couldn't turn on", 1, true) ~= nil, true, game.printed[#game.printed])
 end)
@@ -448,7 +449,7 @@ local function expectAllPassed(run)
         end
     end
 end
-local allNameplatesOn = { enemies = "1", friends = "1", classColors = "1", npcs = "1" }
+local allNameplatesOn = { enemies = "1", friends = "1", classColors = "1", npcs = "1", minions = "1" }
 
 test("/grt debug on a controller: every check passes, settings come back, a reload box", function()
     boot(true, { enabled = true, offset = -5 }, false, allNameplatesOn)
@@ -544,7 +545,7 @@ test("debug build: Gamepad Reticle Customizer turned off counts as missing, to s
 end)
 
 test("a Get button for each missing sibling, in order, each with its own CurseForge link", function()
-    boot(true, nil, false, { enemies = "1", friends = "1", classColors = "1", npcs = "1" })
+    boot(true, nil, false, { enemies = "1", friends = "1", classColors = "1", npcs = "1", minions = "1" })
     local names = {}
     for _, initializer in ipairs(game.buttons) do if initializer.buttonText then names[#names + 1] = initializer.name .. ": " .. initializer.buttonText end end
     eq(table.concat(names, ", "), "Camera over shoulder: Get the addon, Customize the reticle: Get the addon")
