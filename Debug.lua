@@ -16,8 +16,8 @@ ReticleOnTarget.Debug = Debug
 
 -- Debug builds only: the other addon turned off in the AddOns list counts as
 -- missing, so its "Get" button and popup show as players without it see them
--- (RelatedAddon.lua).
-if ReticleOnTarget.RelatedAddon then ReticleOnTarget.RelatedAddon.countTurnedOffAsMissing = true end
+-- (RelatedAddons.lua).
+if ReticleOnTarget.RelatedAddons then ReticleOnTarget.RelatedAddons.countTurnedOffAsMissing = true end
 
 local SETTING_KEYS = { "enabled", "offset" }
 

@@ -178,7 +178,7 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     game.printed = printed
     _G.print = function(t) printed[#printed + 1] = t end
     local ns = {}
-    for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "RelatedAddon.lua" }) do
+    for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "RelatedAddons.lua" }) do
         assert(loadfile(file))("GamepadReticleOnTarget", ns)
     end
     if not releaseBuild then assert(loadfile("Debug.lua"))("GamepadReticleOnTarget", ns) end
@@ -493,7 +493,7 @@ test("the release leaves Debug.lua out; listed under Gamepad", function()
     for line in releaseToc:gmatch("[^\n]+") do
         if not line:find("^#") then loadedFiles[#loadedFiles + 1] = line end
     end
-    eq(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,RelatedAddon.lua")
+    eq(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,RelatedAddons.lua")
     eq(toc:match("## Category: ([^\n]+)"), "Gamepad")
 end)
 
@@ -524,6 +524,17 @@ test("debug build: Gamepad Reticle Customizer turned off counts as missing, to s
     eq(button(), nil, "the release: installed is installed")
     boot(true, nil, false, { customizerInstalled = true })
     eq(button(), nil, "debug build, turned on: no button")
+end)
+
+test("a Get button for each missing sibling, in order, each with its own CurseForge link", function()
+    boot(true, nil, false, { enemies = "1", friends = "1", classColors = "1" })
+    local names = {}
+    for _, initializer in ipairs(game.buttons) do if initializer.buttonText then names[#names + 1] = initializer.buttonText end end
+    eq(table.concat(names, ", "), "Get Gamepad Camera Offset, Get Gamepad Reticle Customizer")
+    for _, initializer in ipairs(game.buttons) do
+        if initializer.name == "Gamepad Camera Offset" then initializer.onClick() end
+    end
+    eq(_G.GamepadReticleOnTargetPopup.editBox:GetText(), "https://www.curseforge.com/projects/1818297")
 end)
 
 reportLine(passed .. " passed, " .. failed .. " failed")

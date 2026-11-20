@@ -7,7 +7,7 @@
 --   Reticle.lua                  where the reticle goes, and when it's placed again
 --   Popup.lua                    a popup in the game's style
 --   Nameplates.lua               asks to turn on the nameplates the reticle sits under
---   RelatedAddon.lua             a hint for Gamepad Crosshair Customizer
+--   RelatedAddons.lua             hints for our other controller addons
 --   Debug.lua                    /grt debug, the in-game test suite (not in the release)
 local ADDON_NAME = ...
 
@@ -93,7 +93,7 @@ function ReticleOnTarget.RegisterSettings()
             ReticleOnTarget.OffsetLabel))
 
     if ReticleOnTarget.AddNameplatesButton then ReticleOnTarget.AddNameplatesButton(layout) end   -- Nameplates.lua
-    if ReticleOnTarget.AddRelatedAddonButton then ReticleOnTarget.AddRelatedAddonButton(layout) end   -- RelatedAddon.lua
+    if ReticleOnTarget.AddRelatedAddonButtons then ReticleOnTarget.AddRelatedAddonButtons(layout) end   -- RelatedAddons.lua
     Settings.RegisterAddOnCategory(category)
 end
 
