@@ -1,5 +1,6 @@
--- Hides parts of the nameplates of friendly NPCs and of friendly players' pets
--- (yours too): their health bar, their name, or both, each with its own setting,
+-- Hides parts of the nameplates of friendly NPCs and of friendly players' minions
+-- (their pets, guardians and totems, yours too, as the game's Nameplates options
+-- call them): their health bar, their name, or both, each with its own setting,
 -- all off by default. The reticle needs a nameplate to sit under, so they stay
 -- on; only the chosen parts are made see-through (their alpha), and the game's
 -- nameplate keeps working underneath. The alpha each part had is kept and put
@@ -16,7 +17,7 @@ local NameplateHiding = {
     -- The setting that hides each part, by kind of unit.
     SETTINGS = {
         npc = { healthBar = "hideNpcHealthBars", name = "hideNpcNames" },
-        pet = { healthBar = "hidePetHealthBars", name = "hidePetNames" },
+        minion = { healthBar = "hideMinionHealthBars", name = "hideMinionNames" },
     },
 }
 ReticleOnTarget.NameplateHiding = NameplateHiding
@@ -35,14 +36,15 @@ local function isFriendly(unit)
     return reaction ~= nil and reaction >= NameplateHiding.FRIENDLY_REACTION
 end
 
--- What kind of unit a nameplate shows: "npc" (a friendly NPC), "pet" (a friendly
--- player's pet or guardian) or nil (anything else: players, enemies, neutral NPCs).
+-- What kind of unit a nameplate shows: "npc" (a friendly NPC), "minion" (a friendly
+-- player's pet, guardian or totem) or nil (anything else: players, enemies,
+-- neutral NPCs).
 function NameplateHiding.Kind(unit)
     if type(UnitExists) ~= "function" or readable(UnitExists(unit)) ~= true then return nil end
     if type(UnitIsPlayer) == "function" and readable(UnitIsPlayer(unit)) == true then return nil end
     if not isFriendly(unit) then return nil end
     local controlledByPlayer = type(UnitPlayerControlled) == "function" and readable(UnitPlayerControlled(unit)) == true
-    return controlledByPlayer and "pet" or "npc"
+    return controlledByPlayer and "minion" or "npc"
 end
 
 -- Whether a part ("healthBar" or "name") of a unit's nameplate should be hidden.

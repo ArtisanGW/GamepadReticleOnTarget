@@ -112,7 +112,12 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
             game.settings[variable] = s
             return s
         end,
-        CreateCheckbox = function() end,
+        CreateCheckbox = function(_, setting, tooltip)
+            local initializer = { checkbox = setting.key, tooltip = tooltip }
+            function initializer:Indent() self.indented = true end
+            game.buttons[#game.buttons + 1] = initializer
+            return initializer
+        end,
         CreateSlider = function(_, setting, options) game.options = game.options or {}; game.options[setting.key] = options end,
         CreateSliderOptions = function(lo, hi, step)
             return { lo = lo, hi = hi, SetLabelFormatter = function(self, _, fn) self.format = fn end }
@@ -161,6 +166,7 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
         return initializer
     end
     local function addInitializer(_, initializer) game.buttons[#game.buttons + 1] = initializer end
+    _G.CreateSettingsListSectionHeaderInitializer = function(name) return { heading = name } end
     _G.SettingsPanel = { GetLayout = function() return { AddInitializer = addInitializer } end }
     _G.C_NamePlate = {
         GetNamePlateForUnit = function(unit) return game.nameplates[unit] end,
@@ -555,7 +561,7 @@ test("a Get button for each missing sibling, in order, each with its own CurseFo
     eq(_G.GamepadReticleOnTargetPopup.editBox:GetText(), "https://www.curseforge.com/projects/1818297")
 end)
 
--- Hiding health bars and names on friendly NPCs' and pets' nameplates
+-- Hiding health bars and names on friendly NPCs' and minions' nameplates
 
 -- A nameplate on screen for a unit: its UnitFrame with a health bar container and
 -- a name, each with an alpha, as the game's.
@@ -578,41 +584,41 @@ end
 -- "bar name" alphas of a plate, e.g. "0 1".
 local function looks(unitFrame) return unitFrame.HealthBarsContainer.alpha .. " " .. unitFrame.name.alpha end
 local FRIENDLY_NPC = { reaction = 5 }
-local FRIENDLY_PET = { reaction = 5, controlled = true }
+local FRIENDLY_MINION = { reaction = 5, controlled = true }
 local FRIENDLY_PLAYER = { reaction = 5, player = true, controlled = true }
 local ENEMY_NPC = { reaction = 2 }
 local NEUTRAL_NPC = { reaction = 4 }
-local function hideAll() return { hideNpcHealthBars = true, hideNpcNames = true, hidePetHealthBars = true, hidePetNames = true } end
+local function hideAll() return { hideNpcHealthBars = true, hideNpcNames = true, hideMinionHealthBars = true, hideMinionNames = true } end
 
 test("all four off by default: every nameplate as the game draws it", function()
     boot(true, nil, false, allNameplatesOn)
     enterWorld()
-    for _, key in ipairs({ "hideNpcHealthBars", "hideNpcNames", "hidePetHealthBars", "hidePetNames" }) do
+    for _, key in ipairs({ "hideNpcHealthBars", "hideNpcNames", "hideMinionHealthBars", "hideMinionNames" }) do
         eq(GamepadReticleOnTargetDB[key], false, key)
     end
-    eq(looks(addPlate("nameplate1", FRIENDLY_NPC)), "1 1"); eq(looks(addPlate("nameplate2", FRIENDLY_PET)), "1 1")
+    eq(looks(addPlate("nameplate1", FRIENDLY_NPC)), "1 1"); eq(looks(addPlate("nameplate2", FRIENDLY_MINION)), "1 1")
 end)
 
 test("each of the four on its own: only its part, only on its kind of unit", function()
     boot(true, nil, false, allNameplatesOn)
     enterWorld()
-    local npc, pet = addPlate("nameplate1", FRIENDLY_NPC), addPlate("nameplate2", FRIENDLY_PET)
+    local npc, pet = addPlate("nameplate1", FRIENDLY_NPC), addPlate("nameplate2", FRIENDLY_MINION)
     set("hideNpcHealthBars", true)
-    eq(looks(npc), "0 1", "NPC: bar hidden, name kept"); eq(looks(pet), "1 1", "pet untouched")
+    eq(looks(npc), "0 1", "NPC: bar hidden, name kept"); eq(looks(pet), "1 1", "minion untouched")
     set("hideNpcHealthBars", false); set("hideNpcNames", true)
     eq(looks(npc), "1 0", "NPC: name hidden, bar kept")
-    set("hideNpcNames", false); set("hidePetHealthBars", true)
-    eq(looks(pet), "0 1", "pet: bar hidden"); eq(looks(npc), "1 1", "NPC untouched")
-    set("hidePetHealthBars", false); set("hidePetNames", true)
-    eq(looks(pet), "1 0", "pet: name hidden")
-    set("hidePetNames", false)
+    set("hideNpcNames", false); set("hideMinionHealthBars", true)
+    eq(looks(pet), "0 1", "minion: bar hidden"); eq(looks(npc), "1 1", "NPC untouched")
+    set("hideMinionHealthBars", false); set("hideMinionNames", true)
+    eq(looks(pet), "1 0", "minion: name hidden")
+    set("hideMinionNames", false)
     eq(looks(pet), "1 1"); eq(looks(npc), "1 1")
 end)
 
-test("all four on: friendly NPCs and pets fully hidden; players, enemies and neutral ones untouched", function()
+test("all four on: friendly NPCs and minions fully hidden; players, enemies and neutral ones untouched", function()
     boot(true, hideAll(), false, allNameplatesOn)
     enterWorld()
-    local npc, pet = addPlate("nameplate1", FRIENDLY_NPC), addPlate("nameplate2", FRIENDLY_PET)
+    local npc, pet = addPlate("nameplate1", FRIENDLY_NPC), addPlate("nameplate2", FRIENDLY_MINION)
     eq(looks(npc), "0 0"); eq(looks(pet), "0 0")
     eq(npc.alpha, 1, "the nameplate itself untouched")
     eq(looks(addPlate("nameplate3", FRIENDLY_PLAYER)), "1 1", "a friendly player")
@@ -658,6 +664,18 @@ test("a nameplate the game locks for addons is left alone", function()
     function npc:IsForbidden() return true end
     game.fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
     eq(looks(npc), "1 1", "not touched")
+end)
+
+test("laid out as the game's Nameplates options: a heading per group, its boxes indented below", function()
+    boot(true, nil, false, allNameplatesOn)
+    local rows = {}
+    for _, row in ipairs(game.buttons) do
+        if row.heading then rows[#rows + 1] = "# " .. row.heading
+        elseif row.checkbox then rows[#rows + 1] = (row.indented and "  " or "") .. row.checkbox end
+    end
+    eq(table.concat(rows, ", "), "enabled, # Friendly NPC Nameplates,   hideNpcHealthBars,   hideNpcNames, "
+        .. "# Friendly Player Minions,   hideMinionHealthBars,   hideMinionNames")
+    eq(game.settings.GamepadReticleOnTarget_hideMinionNames ~= nil, true)
 end)
 
 reportLine(passed .. " passed, " .. failed .. " failed")

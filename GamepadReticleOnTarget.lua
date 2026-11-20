@@ -7,7 +7,7 @@
 --   Reticle.lua                  where the reticle goes, and when it's placed again
 --   Popup.lua                    a popup in the game's style
 --   Nameplates.lua               asks to turn on the nameplates the reticle sits under
---   NameplateHiding.lua          hides health bars or names on friendly NPCs' and pets' nameplates
+--   NameplateHiding.lua          hides health bars or names on friendly NPCs' and minions' nameplates
 --   RelatedAddons.lua             hints for our other controller addons
 --   Debug.lua                    /grt debug, the in-game test suite (not in the release)
 local ADDON_NAME = ...
@@ -18,11 +18,11 @@ local ReticleOnTarget = {
     --          (up) screen pixels. Pixels, not a percentage: a nameplate keeps its
     --          size on screen at any distance, so a pixel offset puts the dot at the
     --          same place on it.
-    -- hideNpcHealthBars, hideNpcNames, hidePetHealthBars, hidePetNames: that part
-    --          of friendly NPCs' and pets' nameplates hidden (NameplateHiding.lua).
+    -- hideNpcHealthBars, hideNpcNames, hideMinionHealthBars, hideMinionNames: that part
+    --          of friendly NPCs' and minions' nameplates hidden (NameplateHiding.lua).
     --          Off by default: the addon never changes how the game looks unless asked.
     DEFAULTS = { enabled = true, offset = 0, hideNpcHealthBars = false, hideNpcNames = false,
-        hidePetHealthBars = false, hidePetNames = false },
+        hideMinionHealthBars = false, hideMinionNames = false },
     OFFSET_MIN = -200, OFFSET_MAX = 200, OFFSET_STEP = 5,
 }
 _G.GamepadReticleOnTarget = ReticleOnTarget
@@ -79,10 +79,15 @@ function ReticleOnTarget.RegisterSettings()
             ReticleOnTarget.DEFAULTS[key])
         Settings.SetOnValueChangedCallback(variableName, onChange or function() ReticleOnTarget.Reticle.Place() end)
         if valueType == Settings.VarType.Boolean then
-            Settings.CreateCheckbox(category, setting, tooltip)
-        else
-            Settings.CreateSlider(category, setting, options, tooltip)
+            return Settings.CreateCheckbox(category, setting, tooltip)
         end
+        return Settings.CreateSlider(category, setting, options, tooltip)
+    end
+
+    -- A heading, as the game's Nameplates options have them.
+    local function addHeading(name)
+        if type(CreateSettingsListSectionHeaderInitializer) ~= "function" then return end
+        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(name))
     end
 
     addSetting("enabled", Settings.VarType.Boolean, "Reticle on your target",
@@ -98,15 +103,19 @@ function ReticleOnTarget.RegisterSettings()
         sliderOptions(ReticleOnTarget.OFFSET_MIN, ReticleOnTarget.OFFSET_MAX, ReticleOnTarget.OFFSET_STEP,
             ReticleOnTarget.OffsetLabel))
     local function refreshHiding() ReticleOnTarget.NameplateHiding.Refresh() end
-    local PETS = "friendly players' pets, yours too"
-    local function addHideSetting(key, label, what)
-        addSetting(key, Settings.VarType.Boolean, label, "Hides " .. what .. ".\n\n"
-            .. "The reticle still goes on them. Turned off, it shows again.", nil, refreshHiding)
+    -- Indented under a heading, as the game indents its Minions under Friendly
+    -- Player Nameplates.
+    local function addHideSetting(key, label, what, whose)
+        local initializer = addSetting(key, Settings.VarType.Boolean, label, "Hides " .. what .. " on the nameplates of "
+            .. whose .. ".\n\nThe reticle still goes on them. Turned off, it shows again.", nil, refreshHiding)
+        if type(initializer) == "table" and type(initializer.Indent) == "function" then initializer:Indent() end
     end
-    addHideSetting("hideNpcHealthBars", "Hide NPC health bars", "the health bar on friendly NPCs' nameplates")
-    addHideSetting("hideNpcNames", "Hide NPC names", "the name on friendly NPCs' nameplates")
-    addHideSetting("hidePetHealthBars", "Hide pet health bars", "the health bar on the nameplates of " .. PETS)
-    addHideSetting("hidePetNames", "Hide pet names", "the name on the nameplates of " .. PETS)
+    addHeading("Friendly NPC Nameplates")
+    addHideSetting("hideNpcHealthBars", "Hide health bars", "the health bar", "friendly NPCs")
+    addHideSetting("hideNpcNames", "Hide names", "the name", "friendly NPCs")
+    addHeading("Friendly Player Minions")
+    addHideSetting("hideMinionHealthBars", "Hide health bars", "the health bar", "friendly players' minions (pets, guardians, totems, yours too)")
+    addHideSetting("hideMinionNames", "Hide names", "the name", "friendly players' minions (pets, guardians, totems, yours too)")
 
     if ReticleOnTarget.AddNameplatesButton then ReticleOnTarget.AddNameplatesButton(layout) end   -- Nameplates.lua
     if ReticleOnTarget.AddRelatedAddonButtons then ReticleOnTarget.AddRelatedAddonButtons(layout) end   -- RelatedAddons.lua
