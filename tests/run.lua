@@ -178,6 +178,7 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     _G.UnitReaction = function(unit) return kindField(unit, "reaction") end
     _G.UnitIsPlayer = function(unit) return kindField(unit, "player") == true end
     _G.UnitPlayerControlled = function(unit) return kindField(unit, "controlled") == true end
+    _G.UnitIsBattlePetCompanion = function(unit) return kindField(unit, "companion") == true end
     game.combat = false
     _G.InCombatLockdown = function() return game.combat end
     game.bindings, game.bindingOwners = {}, {}
@@ -658,6 +659,21 @@ test("a nameplate the game locks for addons is left alone", function()
     function npc:IsForbidden() return true end
     game.fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
     eq(looks(npc), "1 1", "not touched")
+end)
+
+test("Hide companions: a companion's whole nameplate, anyone's; off by default, and the NPC and pet boxes leave it alone", function()
+    boot(true, nil, false, allNameplatesOn)
+    enterWorld()
+    eq(GamepadReticleOnTargetDB.hideCompanions, false)
+    local mine = addPlate("nameplate1", { reaction = 5, companion = true })
+    local enemyPlayers = addPlate("nameplate2", { reaction = 2, companion = true })
+    set("hideNpcHealthBars", true); set("hideNpcNames", true); set("hidePetHealthBars", true); set("hidePetNames", true)
+    eq(looks(mine), "1 1", "not an NPC or a pet to the other boxes")
+    set("hideCompanions", true)
+    eq(looks(mine), "0 0", "bar and name"); eq(looks(enemyPlayers), "0 0", "an enemy player's companion too")
+    eq(looks(addPlate("nameplate3", FRIENDLY_NPC)), "0 0", "the NPC boxes still work")
+    set("hideCompanions", false)
+    eq(looks(mine), "1 1")
 end)
 
 reportLine(passed .. " passed, " .. failed .. " failed")
