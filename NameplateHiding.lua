@@ -1,7 +1,6 @@
 -- Hides parts of the nameplates of friendly NPCs and of friendly players' pets
--- (yours too): their health bar, their name, or both, each with its own setting;
--- and companions' (the non-combat pets players summon) whole nameplate. All off
--- by default. The reticle needs a nameplate to sit under, so they stay
+-- (yours too): their health bar, their name, or both, each with its own setting,
+-- all off by default. The reticle needs a nameplate to sit under, so they stay
 -- on; only the chosen parts are made see-through (their alpha), and the game's
 -- nameplate keeps working underneath. The alpha each part had is kept and put
 -- back when its setting is turned off or the nameplate goes to another unit.
@@ -18,7 +17,6 @@ local NameplateHiding = {
     SETTINGS = {
         npc = { healthBar = "hideNpcHealthBars", name = "hideNpcNames" },
         pet = { healthBar = "hidePetHealthBars", name = "hidePetNames" },
-        companion = { healthBar = "hideCompanions", name = "hideCompanions" },
     },
 }
 ReticleOnTarget.NameplateHiding = NameplateHiding
@@ -37,16 +35,11 @@ local function isFriendly(unit)
     return reaction ~= nil and reaction >= NameplateHiding.FRIENDLY_REACTION
 end
 
--- What kind of unit a nameplate shows: "companion" (a non-combat pet a player
--- summoned, anyone's: UnitIsBattlePetCompanion), "npc" (a friendly NPC), "pet" (a
--- friendly player's pet or guardian) or nil (anything else: players, enemies,
--- neutral NPCs).
+-- What kind of unit a nameplate shows: "npc" (a friendly NPC), "pet" (a friendly
+-- player's pet or guardian) or nil (anything else: players, enemies, neutral NPCs).
 function NameplateHiding.Kind(unit)
     if type(UnitExists) ~= "function" or readable(UnitExists(unit)) ~= true then return nil end
     if type(UnitIsPlayer) == "function" and readable(UnitIsPlayer(unit)) == true then return nil end
-    if type(UnitIsBattlePetCompanion) == "function" and readable(UnitIsBattlePetCompanion(unit)) == true then
-        return "companion"
-    end
     if not isFriendly(unit) then return nil end
     local controlledByPlayer = type(UnitPlayerControlled) == "function" and readable(UnitPlayerControlled(unit)) == true
     return controlledByPlayer and "pet" or "npc"

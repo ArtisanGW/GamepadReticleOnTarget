@@ -20,10 +20,9 @@ local ReticleOnTarget = {
     --          same place on it.
     -- hideNpcHealthBars, hideNpcNames, hidePetHealthBars, hidePetNames: that part
     --          of friendly NPCs' and pets' nameplates hidden (NameplateHiding.lua).
-    -- hideCompanions: companions' (non-combat pets') whole nameplate hidden.
-    --          All off by default: the addon never changes how the game looks unless asked.
+    --          Off by default: the addon never changes how the game looks unless asked.
     DEFAULTS = { enabled = true, offset = 0, hideNpcHealthBars = false, hideNpcNames = false,
-        hidePetHealthBars = false, hidePetNames = false, hideCompanions = false },
+        hidePetHealthBars = false, hidePetNames = false },
     OFFSET_MIN = -200, OFFSET_MAX = 200, OFFSET_STEP = 5,
 }
 _G.GamepadReticleOnTarget = ReticleOnTarget
@@ -108,8 +107,6 @@ function ReticleOnTarget.RegisterSettings()
     addHideSetting("hideNpcNames", "Hide NPC names", "the name on friendly NPCs' nameplates")
     addHideSetting("hidePetHealthBars", "Hide pet health bars", "the health bar on the nameplates of " .. PETS)
     addHideSetting("hidePetNames", "Hide pet names", "the name on the nameplates of " .. PETS)
-    addHideSetting("hideCompanions", "Hide companions",
-        "the whole nameplate of companions, the non-combat pets players summon, anyone's")
 
     if ReticleOnTarget.AddNameplatesButton then ReticleOnTarget.AddNameplatesButton(layout) end   -- Nameplates.lua
     if ReticleOnTarget.AddRelatedAddonButtons then ReticleOnTarget.AddRelatedAddonButtons(layout) end   -- RelatedAddons.lua
