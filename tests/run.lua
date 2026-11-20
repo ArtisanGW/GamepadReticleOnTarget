@@ -693,5 +693,11 @@ test("neutral NPCs: their own two boxes; enemies and others' minions never touch
     eq(looks(enemy), "1 1", "an enemy, never"); eq(looks(enemyMinion), "1 1", "a neutral player's minion, never")
 end)
 
+test("saved keys the addon doesn't use are dropped; its own record of the nameplate question kept", function()
+    boot(true, { enabled = true, offset = 5, hidePets = true, somethingElse = 1, nameplatesAsked = true })
+    eq(GamepadReticleOnTargetDB.hidePets, nil); eq(GamepadReticleOnTargetDB.somethingElse, nil)
+    eq(GamepadReticleOnTargetDB.offset, 5); eq(GamepadReticleOnTargetDB.nameplatesAsked, true)
+end)
+
 reportLine(passed .. " passed, " .. failed .. " failed")
 os.exit(failed == 0 and 0 or 1)

@@ -39,6 +39,11 @@ ReticleOnTarget.Clamp = clamp
 function ReticleOnTarget.GetSettings()
     if type(GamepadReticleOnTargetDB) ~= "table" then GamepadReticleOnTargetDB = {} end
     local settings = GamepadReticleOnTargetDB
+    -- Saved keys this addon doesn't use: dropped (nameplatesAsked is its own
+    -- record that the nameplate question was asked, Nameplates.lua).
+    for key in pairs(settings) do
+        if ReticleOnTarget.DEFAULTS[key] == nil and key ~= "nameplatesAsked" then settings[key] = nil end
+    end
     for key, defaultValue in pairs(ReticleOnTarget.DEFAULTS) do
         if settings[key] == nil then settings[key] = defaultValue end
     end
