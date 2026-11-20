@@ -11,6 +11,7 @@ GamepadReticleOnTarget.lua
 Reticle.lua
 Popup.lua
 Nameplates.lua
+NameplateNames.lua
 NameplateHiding.lua
 RelatedAddons.lua
 #@do-not-package@

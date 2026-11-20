@@ -59,6 +59,15 @@ function NameplateHiding.ShouldHide(unit, partName)
     return settingKeys ~= nil and settings[settingKeys[partName]] == true
 end
 
+-- Whether a unit's name gets the look of the game's world names: a friendly or
+-- neutral NPC, with "World-style names" ticked for its group.
+NameplateHiding.WORLD_NAME_SETTINGS = { npc = "npcWorldNames", neutral = "neutralWorldNames" }
+function NameplateHiding.WorldNames(unit)
+    local settings = ReticleOnTarget.GetSettings()
+    local settingKey = NameplateHiding.WORLD_NAME_SETTINGS[NameplateHiding.Kind(unit)]
+    return settings.enabled == true and settingKey ~= nil and settings[settingKey] == true
+end
+
 local function unitFrameOf(nameplate)
     local unitFrame = type(nameplate) == "table" and nameplate.UnitFrame
     if type(unitFrame) ~= "table" then return nil end
@@ -66,12 +75,18 @@ local function unitFrameOf(nameplate)
     return unitFrame
 end
 
--- The parts that can be hidden: the health bar with its border (the UnitFrame's
--- HealthBarsContainer, else the bar) and the name.
+-- The parts that can be hidden, each a list of regions: the health bar with its
+-- border (the UnitFrame's HealthBarsContainer, else the bar) and the level badge
+-- beside the name; the name, and our title under it (NameplateNames.lua).
 local function partsOf(unitFrame)
-    local parts = { healthBar = unitFrame.HealthBarsContainer or unitFrame.healthBar, name = unitFrame.name }
-    for partName, part in pairs(parts) do
-        if type(part) ~= "table" or type(part.SetAlpha) ~= "function" then parts[partName] = nil end
+    local parts = {
+        healthBar = { unitFrame.HealthBarsContainer or unitFrame.healthBar, unitFrame.PlayerLevelDiffFrame },
+        name = { unitFrame.name, ReticleOnTarget.NameplateNames.Title(unitFrame) },
+    }
+    for _, regions in pairs(parts) do
+        for i = #regions, 1, -1 do
+            if type(regions[i]) ~= "table" or type(regions[i].SetAlpha) ~= "function" then table.remove(regions, i) end
+        end
     end
     return parts
 end
@@ -89,10 +104,16 @@ local function show(part)
 end
 
 -- Each part of a unit's nameplate hidden or shown, as its setting says (unit nil:
--- every part shown, the nameplate going back to the game).
+-- every part shown, the nameplate going back to the game). A friendly or neutral
+-- NPC can also get its name as the game draws it without nameplates: its color,
+-- its title (NameplateNames.lua), when "World-style names" is ticked for it.
 local function apply(unitFrame, unit)
-    for partName, part in pairs(partsOf(unitFrame)) do
-        if unit and NameplateHiding.ShouldHide(unit, partName) then hide(part) else show(part) end
+    ReticleOnTarget.NameplateNames.Style(unitFrame, unit, unit ~= nil and NameplateHiding.WorldNames(unit))
+    for partName, regions in pairs(partsOf(unitFrame)) do
+        local hidden = unit and NameplateHiding.ShouldHide(unit, partName)
+        for _, region in ipairs(regions) do
+            if hidden then hide(region) else show(region) end
+        end
     end
 end
 

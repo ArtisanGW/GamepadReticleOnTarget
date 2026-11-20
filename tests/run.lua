@@ -184,6 +184,19 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     _G.UnitReaction = function(unit) return kindField(unit, "reaction") end
     _G.UnitIsPlayer = function(unit) return kindField(unit, "player") == true end
     _G.UnitPlayerControlled = function(unit) return kindField(unit, "controlled") == true end
+    -- As the game: green for friendly, yellow for neutral, red for enemies.
+    _G.UnitSelectionColor = function(unit)
+        local reaction = kindField(unit, "reaction") or 0
+        if reaction >= 5 then return 0, 1, 0 elseif reaction == 4 then return 1, 1, 0 end
+        return 1, 0, 0
+    end
+    -- A unit's tooltip: its name, then its title (game.unitKinds[unit].title) or its level.
+    _G.C_TooltipInfo = { GetUnit = function(unit)
+        local title = kindField(unit, "title")
+        return { lines = { { leftText = "Someone" }, { leftText = title or "Level 30" } } }
+    end }
+    _G.LEVEL = "Level"
+    _G.CompactUnitFrame_UpdateName = function() end
     game.combat = false
     _G.InCombatLockdown = function() return game.combat end
     game.bindings, game.bindingOwners = {}, {}
@@ -201,7 +214,7 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     game.printed = printed
     _G.print = function(t) printed[#printed + 1] = t end
     local ns = {}
-    for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "NameplateHiding.lua", "RelatedAddons.lua" }) do
+    for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "NameplateNames.lua", "NameplateHiding.lua", "RelatedAddons.lua" }) do
         assert(loadfile(file))("GamepadReticleOnTarget", ns)
     end
     if not releaseBuild then assert(loadfile("Debug.lua"))("GamepadReticleOnTarget", ns) end
@@ -517,7 +530,7 @@ test("the release leaves Debug.lua out; listed under Gamepad", function()
     for line in releaseToc:gmatch("[^\n]+") do
         if not line:find("^#") then loadedFiles[#loadedFiles + 1] = line end
     end
-    eq(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,NameplateHiding.lua,RelatedAddons.lua")
+    eq(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,NameplateNames.lua,NameplateHiding.lua,RelatedAddons.lua")
     eq(toc:match("## Category: ([^\n]+)"), "Gamepad")
 end)
 
@@ -567,15 +580,26 @@ end)
 -- a name, each with an alpha, as the game's.
 local function addPlate(unit, kind, barAlpha)
     local function part(startAlpha)
-        local region = { alpha = startAlpha or 1 }
+        local region = { alpha = startAlpha or 1, color = { 1, 1, 1 }, shown = true }
         function region:SetAlpha(value) self.alpha = value end
         function region:GetAlpha() return self.alpha end
+        function region:SetVertexColor(red, green, blue) self.color = { red, green, blue } end
+        function region:GetVertexColor() return self.color[1], self.color[2], self.color[3] end
+        function region:GetFont() return "font", 12, "" end
+        function region:SetFont(font) self.font = font end
+        function region:SetText(text) self.text = text end
+        function region:SetPoint() end
+        function region:Show() self.shown = true end
+        function region:Hide() self.shown = false end
+        function region:IsShown() return self.shown end
         return region
     end
     local unitFrame = part(1)
     unitFrame.unit = unit
     unitFrame.HealthBarsContainer = part(barAlpha)
+    unitFrame.PlayerLevelDiffFrame = part(1)
     unitFrame.name = part(1)
+    function unitFrame:CreateFontString() self.title = part(1); return self.title end
     game.nameplates[unit] = { UnitFrame = unitFrame }
     game.unitKinds[unit] = kind
     game.fire("NAME_PLATE_UNIT_ADDED", unit)
@@ -674,8 +698,8 @@ test("laid out as the game's Nameplates options: a heading per group, its boxes 
         if row.heading then rows[#rows + 1] = "# " .. row.heading
         elseif row.checkbox then rows[#rows + 1] = (row.indented and "  " or "") .. row.checkbox end
     end
-    eq(table.concat(rows, ", "), "enabled, # Friendly NPC Nameplates,   hideNpcHealthBars,   hideNpcNames, "
-        .. "# Neutral NPC Nameplates,   hideNeutralHealthBars,   hideNeutralNames, "
+    eq(table.concat(rows, ", "), "enabled, # Friendly NPC Nameplates,   hideNpcHealthBars,   hideNpcNames,   npcWorldNames, "
+        .. "# Neutral NPC Nameplates,   hideNeutralHealthBars,   hideNeutralNames,   neutralWorldNames, "
         .. "# Friendly Player Minions,   hideMinionHealthBars,   hideMinionNames")
     eq(game.settings.GamepadReticleOnTarget_hideMinionNames ~= nil, true)
 end)
@@ -744,6 +768,53 @@ test("turned off: hidden health bars and names show again", function()
     eq(looks(npc), "1 1", "the game's nameplate as it is")
     set("enabled", true)
     eq(looks(npc), "0 0", "hidden again")
+end)
+
+test("World-style names: friendly and neutral NPCs' names in the game's color, title under it; the bar hides the level badge", function()
+    boot(true, { npcWorldNames = true, neutralWorldNames = true, hideNpcHealthBars = true }, false, allNameplatesOn)
+    enterWorld()
+    local master = addPlate("nameplate1", { reaction = 5, title = "Stable Master" })
+    eq(table.concat(master.name.color, " "), "0 1 0", "green, as the game's world names")
+    eq(master.title.text, "<Stable Master>"); eq(table.concat(master.title.color, " "), "0 1 0"); eq(master.title.shown, true)
+    eq(master.PlayerLevelDiffFrame.alpha, 0, "the level badge goes with the bar")
+    local emissary = addPlate("nameplate2", { reaction = 4 })
+    eq(table.concat(emissary.name.color, " "), "1 1 0", "neutral: yellow")
+    eq(emissary.title, nil, "no title (its tooltip's second line is its level): none added")
+end)
+
+test("World-style names off: the name's own color back, the title hidden; Hide names hides the title too", function()
+    boot(true, { npcWorldNames = true }, false, allNameplatesOn)
+    enterWorld()
+    local master = addPlate("nameplate1", { reaction = 5, title = "Stable Master" })
+    set("hideNpcNames", true)
+    eq(master.name.alpha, 0); eq(master.title.alpha, 0, "the title with the name")
+    set("hideNpcNames", false)
+    eq(master.title.alpha, 1)
+    set("npcWorldNames", false)
+    eq(table.concat(master.name.color, " "), "1 1 1", "the game's white back"); eq(master.title.shown, false)
+end)
+
+test("the game's own name update is followed by our color", function()
+    boot(true, { npcWorldNames = true }, false, allNameplatesOn)
+    enterWorld()
+    local master = addPlate("nameplate1", { reaction = 5 })
+    master.name:SetVertexColor(1, 1, 1)
+    CompactUnitFrame_UpdateName(master)
+    eq(table.concat(master.name.color, " "), "0 1 0")
+end)
+
+test("off by default, and minions keep the game's name look", function()
+    boot(true, nil, false, allNameplatesOn)
+    enterWorld()
+    eq(GamepadReticleOnTargetDB.npcWorldNames, false); eq(GamepadReticleOnTargetDB.neutralWorldNames, false)
+    local npc = addPlate("nameplate1", { reaction = 5, title = "Stable Master" })
+    eq(table.concat(npc.name.color, " "), "1 1 1", "the game's own look"); eq(npc.title, nil)
+    set("hideNpcHealthBars", true)
+    eq(table.concat(npc.name.color, " "), "1 1 1", "hiding the bar alone keeps the game's name")
+    boot(true, { npcWorldNames = true, neutralWorldNames = true }, false, allNameplatesOn)
+    enterWorld()
+    local minion = addPlate("nameplate2", FRIENDLY_MINION)
+    eq(table.concat(minion.name.color, " "), "1 1 1"); eq(minion.title, nil)
 end)
 
 reportLine(passed .. " passed, " .. failed .. " failed")
