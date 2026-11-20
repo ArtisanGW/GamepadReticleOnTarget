@@ -6,24 +6,27 @@
 local ReticleOnTarget = _G.GamepadReticleOnTarget
 
 local RelatedAddons = {
-    -- Each: its folder name, its title, its CurseForge page (the project's
-    -- permanent short address, which redirects to it) and its button's tooltip.
+    -- Each: its folder name, its title, its settings row's label, its CurseForge
+    -- page (the project's permanent short address, which redirects to it) and
+    -- the row's tooltip.
     SIBLINGS = {
         {
             NAME = "GamepadCameraOffset",
             TITLE = "Gamepad Camera Offset",
+            LABEL = "Camera over shoulder",   -- the settings row: what it does
             LINK = "https://www.curseforge.com/projects/1818297",
             TOOLTIP = "Moves the camera over your shoulder, with a controller too.\n\n"
-            .. "A separate addon; this one works without it.",
+            .. "A separate addon, Gamepad Camera Offset; this one works without it.",
         },
         {
             NAME = "GamepadReticleCustomizer",
             TITLE = "Gamepad Reticle Customizer",
+            LABEL = "Customize the reticle",   -- the settings row: what it does
             LINK = "https://www.curseforge.com/projects/1818557",
             TOOLTIP = "Customizes the reticle:\n\n"
             .. "• Its shape, size, color and border\n"
             .. "• An icon on your target: its class, a raid marker\n\n"
-            .. "A separate addon; this one works without it.",
+            .. "A separate addon, Gamepad Reticle Customizer; this one works without it.",
         },
     },
 }
@@ -92,7 +95,7 @@ end
 function ReticleOnTarget.AddRelatedAddonButtons(layout)
     if not (layout and type(CreateSettingsButtonInitializer) == "function") then return end
     for _, sibling in ipairs(RelatedAddons.Missing()) do
-        layout:AddInitializer(CreateSettingsButtonInitializer(sibling.TITLE, "Get " .. sibling.TITLE,
+        layout:AddInitializer(CreateSettingsButtonInitializer(sibling.LABEL, "Get the addon",
             function() RelatedAddons.ShowLink(sibling) end, sibling.TOOLTIP, true))
     end
 end
