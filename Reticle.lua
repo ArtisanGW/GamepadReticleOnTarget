@@ -123,7 +123,7 @@ end
 function Reticle.PlacedOn() return placedOn end
 -- Where it was put on a nameplate: { anchor, height }. Asked here, not measured:
 -- a frame anchored to a nameplate (a restricted region) can't be measured from
--- addon code (GetPoint fails: "Can't measure restricted regions", seen in game).
+-- addon code (GetPoint fails: "Can't measure restricted regions").
 function Reticle.Placement() return placedOn == "nameplate" and placement or nil end
 
 -- Placed again on the next frame, once, however many reasons came in this frame

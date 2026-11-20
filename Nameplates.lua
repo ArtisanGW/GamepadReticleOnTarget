@@ -99,9 +99,8 @@ end
 -- The settings page's button (GamepadReticleOnTarget.lua calls this while building it).
 -- Added only if one of them is off when the page is built (each login or
 -- reload): no function of ours for the game to call while it lays out the page.
--- A shown predicate (AddShownPredicate) did that, and from then on the
--- controller's navigation stayed stuck on the first row of our settings pages,
--- with no error (seen in game, 2026-11-20).
+-- A shown predicate (AddShownPredicate) would be one, and it leaves the
+-- controller's navigation stuck on the first row of our settings pages.
 function ReticleOnTarget.AddNameplatesButton(layout)
     if not (layout and type(CreateSettingsButtonInitializer) == "function") then return end
     if #Nameplates.Missing() == 0 then return end

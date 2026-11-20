@@ -16,7 +16,7 @@ local RelatedAddons = {
             LABEL = "Camera over shoulder",   -- the settings row: what it does
             LINK = "https://www.curseforge.com/projects/1818297",
             TOOLTIP = "Moves the camera over your shoulder, with a controller too.\n\n"
-            .. "A separate addon, Gamepad Camera Offset; this one works without it.",
+            .. "A separate addon; this one works without it.",
         },
         {
             NAME = "GamepadReticleCustomizer",
@@ -26,7 +26,7 @@ local RelatedAddons = {
             TOOLTIP = "Customizes the reticle:\n\n"
             .. "• Its shape, size, color and border\n"
             .. "• An icon on your target: its class, a raid marker\n\n"
-            .. "A separate addon, Gamepad Reticle Customizer; this one works without it.",
+            .. "A separate addon; this one works without it.",
         },
     },
 }
