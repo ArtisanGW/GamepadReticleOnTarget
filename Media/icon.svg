@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <!-- Gamepad Reticle On Target: a nameplate with the reticle, the game's white dot, just below it. -->
-  <rect x="0" y="0" width="512" height="512" rx="96" fill="#15202E"/>
+  <rect x="0" y="0" width="512" height="512" fill="#15202E"/>
   <!-- the nameplate: a square-cornered bar, mostly full -->
   <rect x="96" y="136" width="320" height="64" fill="none" stroke="#5BE0C8" stroke-width="20"/>
   <rect x="122" y="162" width="196" height="12" fill="#5BE0C8"/>
