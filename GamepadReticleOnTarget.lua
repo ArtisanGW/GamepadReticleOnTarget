@@ -7,6 +7,7 @@
 --   Reticle.lua                  where the reticle goes, and when it's placed again
 --   Popup.lua                    a popup in the game's style
 --   Nameplates.lua               asks to turn on the nameplates the reticle sits under
+--   NameplateHiding.lua          makes friendly NPCs' and pets' nameplates see-through
 --   RelatedAddons.lua             hints for our other controller addons
 --   Debug.lua                    /grt debug, the in-game test suite (not in the release)
 local ADDON_NAME = ...
@@ -17,7 +18,8 @@ local ReticleOnTarget = {
     --          (up) screen pixels. Pixels, not a percentage: a nameplate keeps its
     --          size on screen at any distance, so a pixel offset puts the dot at the
     --          same place on it.
-    DEFAULTS = { enabled = true, offset = 0 },
+    -- hideFriendlyNpcs, hidePets: their nameplates see-through (NameplateHiding.lua).
+    DEFAULTS = { enabled = true, offset = 0, hideFriendlyNpcs = true, hidePets = true },
     OFFSET_MIN = -200, OFFSET_MAX = 200, OFFSET_STEP = 5,
 }
 _G.GamepadReticleOnTarget = ReticleOnTarget
@@ -67,11 +69,12 @@ function ReticleOnTarget.RegisterSettings()
     local category, layout = Settings.RegisterVerticalLayoutCategory("Gamepad Reticle On Target")
     ReticleOnTarget.category = category
 
-    local function addSetting(key, valueType, label, tooltip, options)
+    -- onChange (optional): what to run when it changes; placing the reticle again by default.
+    local function addSetting(key, valueType, label, tooltip, options, onChange)
         local variableName = "GamepadReticleOnTarget_" .. key
         local setting = Settings.RegisterAddOnSetting(category, variableName, key, settings, valueType, label,
             ReticleOnTarget.DEFAULTS[key])
-        Settings.SetOnValueChangedCallback(variableName, function() ReticleOnTarget.Reticle.Place() end)
+        Settings.SetOnValueChangedCallback(variableName, onChange or function() ReticleOnTarget.Reticle.Place() end)
         if valueType == Settings.VarType.Boolean then
             Settings.CreateCheckbox(category, setting, tooltip)
         else
@@ -91,6 +94,14 @@ function ReticleOnTarget.RegisterSettings()
         .. "• No target: where the game aims",
         sliderOptions(ReticleOnTarget.OFFSET_MIN, ReticleOnTarget.OFFSET_MAX, ReticleOnTarget.OFFSET_STEP,
             ReticleOnTarget.OffsetLabel))
+    local function refreshHiding() ReticleOnTarget.NameplateHiding.Refresh() end
+    addSetting("hideFriendlyNpcs", Settings.VarType.Boolean, "Hide friendly NPCs",
+        "Makes friendly NPCs' nameplates see-through. The reticle still goes on them.\n\n"
+        .. "Turned off, they show again.", nil, refreshHiding)
+    addSetting("hidePets", Settings.VarType.Boolean, "Hide friendly pets",
+        "Makes the nameplates of friendly players' pets see-through, yours too. "
+        .. "The reticle still goes on them.\n\n"
+        .. "Turned off, they show again.", nil, refreshHiding)
 
     if ReticleOnTarget.AddNameplatesButton then ReticleOnTarget.AddNameplatesButton(layout) end   -- Nameplates.lua
     if ReticleOnTarget.AddRelatedAddonButtons then ReticleOnTarget.AddRelatedAddonButtons(layout) end   -- RelatedAddons.lua

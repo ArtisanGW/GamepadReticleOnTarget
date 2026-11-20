@@ -31,6 +31,7 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     game.saved.nameplateShowEnemies = nameplateOptions.enemies or "0"
     game.saved.nameplateShowFriendlyPlayers = nameplateOptions.friends or "0"
     game.saved.nameplateShowFriendlyClassColor = nameplateOptions.classColors or "0"
+    game.saved.nameplateShowFriendlyNpcs = nameplateOptions.npcs or "0"
     local function fire(event, ...)
         for _, f in ipairs(game.frames) do if f.ev[event] and f.script then f.script(f, event, ...) end end
     end
@@ -144,7 +145,7 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     }
     -- Units and their nameplates: game.units[unit] = true, game.nameplates[unit] = a frame.
     game.units, game.nameplates = {}, {}
-    _G.UnitExists = function(unit) return game.units[unit] == true end
+    _G.UnitExists = function(unit) return game.units[unit] == true or game.unitKinds[unit] ~= nil end
     _G.GetPhysicalScreenSize = function() return 2304, 1536 end
     game.buttons = {}
     _G.CreateSettingsButtonInitializer = function(name, buttonText, onClick, tooltip, addSearchTags, newTagID, gameDataFunc, gameDataEvent)
@@ -160,7 +161,22 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     end
     local function addInitializer(_, initializer) game.buttons[#game.buttons + 1] = initializer end
     _G.SettingsPanel = { GetLayout = function() return { AddInitializer = addInitializer } end }
-    _G.C_NamePlate = { GetNamePlateForUnit = function(unit) return game.nameplates[unit] end }
+    _G.C_NamePlate = {
+        GetNamePlateForUnit = function(unit) return game.nameplates[unit] end,
+        GetNamePlates = function()
+            local list = {}
+            for unit, plate in pairs(game.nameplates) do
+                if unit:find("^nameplate") then plate.namePlateUnitToken = unit; list[#list + 1] = plate end
+            end
+            return list
+        end,
+    }
+    -- What each unit is: game.unitKinds[unit] = { reaction = 1..8, player = true/false, controlled = true/false }.
+    game.unitKinds = {}
+    local function kindField(unit, field) return game.unitKinds[unit] and game.unitKinds[unit][field] end
+    _G.UnitReaction = function(unit) return kindField(unit, "reaction") end
+    _G.UnitIsPlayer = function(unit) return kindField(unit, "player") == true end
+    _G.UnitPlayerControlled = function(unit) return kindField(unit, "controlled") == true end
     game.combat = false
     _G.InCombatLockdown = function() return game.combat end
     game.bindings, game.bindingOwners = {}, {}
@@ -178,7 +194,7 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     game.printed = printed
     _G.print = function(t) printed[#printed + 1] = t end
     local ns = {}
-    for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "RelatedAddons.lua" }) do
+    for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "NameplateHiding.lua", "RelatedAddons.lua" }) do
         assert(loadfile(file))("GamepadReticleOnTarget", ns)
     end
     if not releaseBuild then assert(loadfile("Debug.lua"))("GamepadReticleOnTarget", ns) end
@@ -331,6 +347,7 @@ end
 local function nameplatesBox() local frame = popup(); return frame and frame.text.label:find("nameplate", 1, true) and frame or nil end
 local function nameplateValues()
     return game.saved.nameplateShowEnemies .. game.saved.nameplateShowFriendlyPlayers .. game.saved.nameplateShowFriendlyClassColor
+        .. game.saved.nameplateShowFriendlyNpcs
 end
 
 test("first launch: a box says which nameplate settings are off; Turn on turns those on; asked once", function()
@@ -338,13 +355,13 @@ test("first launch: a box says which nameplate settings are off; Turn on turns t
     enterWorld()
     local box = nameplatesBox()
     eq(box and box.shown, true, "the box")
-    eq(box.text.label:find("• friendly player nameplates\n• class colors on friendly player nameplates", 1, true) ~= nil, true,
+    eq(box.text.label:find("• friendly player nameplates\n• class colors on friendly player nameplates\n• friendly NPC nameplates", 1, true) ~= nil, true,
         "names the two that are off: " .. box.text.label)
     eq(box.text.label:find("enemy nameplates", 1, true), nil, "not the one already on")
-    eq(nameplateValues(), "100", "nothing changed before the click")
+    eq(nameplateValues(), "1000", "nothing changed before the click")
     eq(popupButtons(), "No thanks, Turn on"); eq(box.Border.template, "DialogBorderTemplate", "the game's dialog border")
     clickPopup("Turn on")
-    eq(nameplateValues(), "111", "turned on")
+    eq(nameplateValues(), "1111", "turned on")
     eq(GamepadReticleOnTargetDB.nameplatesAsked, true)
     boot(true, GamepadReticleOnTargetDB, false, { enemies = "1" })
     enterWorld()
@@ -357,7 +374,7 @@ test("on the controller: A turns the nameplates on, B says no; closing gives the
     eq(game.bindings.PAD1, "GamepadReticleOnTargetPopupButton1", "A: Turn on")
     eq(game.bindings.PAD2, "GamepadReticleOnTargetPopupButton2", "B: No thanks")
     _G[game.bindings.PAD1]:Click()
-    eq(nameplateValues(), "111", "turned on with A")
+    eq(nameplateValues(), "1111", "turned on with A")
     eq(game.bindings.PAD1, nil, "given back"); eq(game.bindings.PAD2, nil)
 end)
 
@@ -365,7 +382,7 @@ test("No thanks changes nothing; the settings page's button asks again", functio
     boot(true, nil)
     enterWorld()
     clickPopup("No thanks")
-    eq(nameplateValues(), "000", "nothing changed")
+    eq(nameplateValues(), "0000", "nothing changed")
     eq(GamepadReticleOnTargetDB.enabled, true, "the setting kept")
     local button
     for _, initializer in ipairs(game.buttons) do if initializer.name == "Nameplates" then button = initializer end end
@@ -376,7 +393,7 @@ test("No thanks changes nothing; the settings page's button asks again", functio
 end)
 
 test("no box or row when the nameplates are on; no box when turned off", function()
-    boot(true, nil, false, { enemies = "1", friends = "1", classColors = "1" })
+    boot(true, nil, false, { enemies = "1", friends = "1", classColors = "1", npcs = "1" })
     enterWorld()
     eq(nameplatesBox(), nil, "all on")
     for _, initializer in ipairs(game.buttons) do eq(initializer.name ~= "Nameplates", true, "all on: no row") end
@@ -399,7 +416,7 @@ test("if the game won't take the nameplate settings, Reticle on your target goes
     boot(true, nil, false, { refuse = true })
     enterWorld()
     clickPopup("Turn on")
-    eq(nameplateValues(), "000")
+    eq(nameplateValues(), "0000")
     eq(GamepadReticleOnTargetDB.enabled, false, "the setting that needs them, off")
     eq(game.printed[#game.printed]:find("couldn't turn on", 1, true) ~= nil, true, game.printed[#game.printed])
 end)
@@ -431,7 +448,7 @@ local function expectAllPassed(run)
         end
     end
 end
-local allNameplatesOn = { enemies = "1", friends = "1", classColors = "1" }
+local allNameplatesOn = { enemies = "1", friends = "1", classColors = "1", npcs = "1" }
 
 test("/grt debug on a controller: every check passes, settings come back, a reload box", function()
     boot(true, { enabled = true, offset = -5 }, false, allNameplatesOn)
@@ -493,7 +510,7 @@ test("the release leaves Debug.lua out; listed under Gamepad", function()
     for line in releaseToc:gmatch("[^\n]+") do
         if not line:find("^#") then loadedFiles[#loadedFiles + 1] = line end
     end
-    eq(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,RelatedAddons.lua")
+    eq(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,NameplateHiding.lua,RelatedAddons.lua")
     eq(toc:match("## Category: ([^\n]+)"), "Gamepad")
 end)
 
@@ -527,7 +544,7 @@ test("debug build: Gamepad Reticle Customizer turned off counts as missing, to s
 end)
 
 test("a Get button for each missing sibling, in order, each with its own CurseForge link", function()
-    boot(true, nil, false, { enemies = "1", friends = "1", classColors = "1" })
+    boot(true, nil, false, { enemies = "1", friends = "1", classColors = "1", npcs = "1" })
     local names = {}
     for _, initializer in ipairs(game.buttons) do if initializer.buttonText then names[#names + 1] = initializer.name .. ": " .. initializer.buttonText end end
     eq(table.concat(names, ", "), "Camera over shoulder: Get the addon, Customize the reticle: Get the addon")
@@ -535,6 +552,80 @@ test("a Get button for each missing sibling, in order, each with its own CurseFo
         if initializer.name == "Camera over shoulder" then initializer.onClick() end
     end
     eq(_G.GamepadReticleOnTargetPopup.editBox:GetText(), "https://www.curseforge.com/projects/1818297")
+end)
+
+-- Hiding friendly NPCs' and pets' nameplates
+
+-- A nameplate on screen for a unit: its UnitFrame with an alpha, as the game's.
+local function addPlate(unit, kind, alpha)
+    local unitFrame = { alpha = alpha or 1, unit = unit }
+    function unitFrame:SetAlpha(value) self.alpha = value end
+    function unitFrame:GetAlpha() return self.alpha end
+    local plate = { UnitFrame = unitFrame }
+    game.nameplates[unit] = plate
+    game.unitKinds[unit] = kind
+    game.fire("NAME_PLATE_UNIT_ADDED", unit)
+    return unitFrame
+end
+local FRIENDLY_NPC = { reaction = 5 }
+local FRIENDLY_PET = { reaction = 5, controlled = true }
+local FRIENDLY_PLAYER = { reaction = 5, player = true, controlled = true }
+local ENEMY_NPC = { reaction = 2 }
+local NEUTRAL_NPC = { reaction = 4 }
+
+test("by default, friendly NPCs' and pets' nameplates are see-through; players, enemies and neutral ones are not", function()
+    boot(true, nil, false, allNameplatesOn)
+    enterWorld()
+    eq(GamepadReticleOnTargetDB.hideFriendlyNpcs, true); eq(GamepadReticleOnTargetDB.hidePets, true)
+    local npc, pet = addPlate("nameplate1", FRIENDLY_NPC), addPlate("nameplate2", FRIENDLY_PET)
+    local player, enemy, neutral = addPlate("nameplate3", FRIENDLY_PLAYER), addPlate("nameplate4", ENEMY_NPC),
+        addPlate("nameplate5", NEUTRAL_NPC)
+    eq(npc.alpha, 0, "friendly NPC"); eq(pet.alpha, 0, "a friendly player's pet")
+    eq(player.alpha, 1, "a friendly player"); eq(enemy.alpha, 1, "an enemy"); eq(neutral.alpha, 1, "a neutral NPC")
+end)
+
+test("each checkbox on its own; turned off, the nameplates get their own alpha back", function()
+    boot(true, nil, false, allNameplatesOn)
+    enterWorld()
+    local npc, pet = addPlate("nameplate1", FRIENDLY_NPC, 0.8), addPlate("nameplate2", FRIENDLY_PET)
+    set("hideFriendlyNpcs", false)
+    eq(npc.alpha, 0.8, "the NPC's own alpha back"); eq(pet.alpha, 0, "pets still hidden")
+    set("hidePets", false)
+    eq(pet.alpha, 1)
+    set("hideFriendlyNpcs", true)
+    eq(npc.alpha, 0, "hidden again")
+end)
+
+test("a nameplate going back to the game's pool gets its alpha back; a unit changing sides is checked again", function()
+    boot(true, nil, false, allNameplatesOn)
+    enterWorld()
+    local npc = addPlate("nameplate1", FRIENDLY_NPC)
+    game.fire("NAME_PLATE_UNIT_REMOVED", "nameplate1")
+    eq(npc.alpha, 1, "given back before the game reuses it")
+    local turning = addPlate("nameplate2", FRIENDLY_NPC)
+    eq(turning.alpha, 0)
+    game.unitKinds.nameplate2 = ENEMY_NPC
+    game.fire("UNIT_FACTION", "nameplate2")
+    eq(turning.alpha, 1, "now an enemy: shown")
+end)
+
+test("the reticle still goes on a hidden friendly NPC", function()
+    boot(true, nil, false, allNameplatesOn)
+    enterWorld()
+    addPlate("nameplate1", FRIENDLY_NPC)
+    game.units.target = true; game.nameplates.target = game.nameplates.nameplate1
+    game.fire("PLAYER_TARGET_CHANGED"); frame()
+    eq(GamepadReticle.point.relativeTo, game.nameplates.nameplate1, "under its nameplate, though see-through")
+end)
+
+test("a nameplate the game locks for addons is left alone", function()
+    boot(true, nil, false, allNameplatesOn)
+    enterWorld()
+    local npc = addPlate("nameplate1", FRIENDLY_NPC)
+    npc.alpha = 1
+    function npc:IsForbidden() return true end
+    game.fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+    eq(npc.alpha, 1, "not touched")
 end)
 
 reportLine(passed .. " passed, " .. failed .. " failed")
