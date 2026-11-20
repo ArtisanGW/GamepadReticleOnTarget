@@ -19,8 +19,8 @@
 -- (GamepadMode.AddGamepadIconToButton, FrameReformUtility.lua:25): the active
 -- controller's atlas from InputIconTextureSetUtility (InputIconTexture.lua:565).
 -- Without one, a hint line says which does what instead. It's our own frame, not the game's
--- StaticPopup (shared windows the controller steers: our code in them broke its
--- navigation before). Holding a secure button, it can't be shown in a fight: it
+-- StaticPopup (shared windows the controller steers: our code in them breaks its
+-- navigation). Holding a secure button, it can't be shown in a fight: it
 -- opens once the fight is over.
 local ReticleOnTarget = _G.GamepadReticleOnTarget
 

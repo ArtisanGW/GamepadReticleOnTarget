@@ -51,9 +51,8 @@ function RelatedAddons.TurnedOff(sibling)
     return false
 end
 
--- Whether a sibling is installed. Debug.lua (never in the release) sets
--- RelatedAddons.countTurnedOffAsMissing, so turning one off in the AddOns list
--- shows what players without it see: its button and popup.
+-- Whether a sibling is installed. With countTurnedOffAsMissing set (development
+-- builds), one turned off in the AddOns list counts as missing too.
 function RelatedAddons.Installed(sibling)
     local addOns = _G.C_AddOns
     if type(addOns) ~= "table" or type(addOns.DoesAddOnExist) ~= "function" then return false end

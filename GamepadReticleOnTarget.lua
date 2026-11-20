@@ -10,7 +10,6 @@
 --   NameplateNames.lua           an NPC's name drawn as the game's world names: color, title
 --   NameplateHiding.lua          hides health bars or names on friendly and neutral NPCs' and minions' nameplates
 --   RelatedAddons.lua             hints for our other controller addons
---   Debug.lua                    /grt debug, the in-game test suite (not in the release)
 local ADDON_NAME = ...
 
 local ReticleOnTarget = {
@@ -199,7 +198,7 @@ eventFrame:SetScript("OnEvent", function(_, event, name)
     end
 end)
 
--- /grt (or /gamepadreticleontarget) opens the settings; /grt debug ... goes to the debug suite (Debug.lua).
+-- /grt (or /gamepadreticleontarget) opens the settings.
 SLASH_GAMEPADRETICLEONTARGET1 = "/grt"
 SLASH_GAMEPADRETICLEONTARGET2 = "/gamepadreticleontarget"
 SlashCmdList.GAMEPADRETICLEONTARGET = function(message)
