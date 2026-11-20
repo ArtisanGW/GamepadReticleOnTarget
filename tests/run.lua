@@ -588,12 +588,13 @@ local FRIENDLY_MINION = { reaction = 5, controlled = true }
 local FRIENDLY_PLAYER = { reaction = 5, player = true, controlled = true }
 local ENEMY_NPC = { reaction = 2 }
 local NEUTRAL_NPC = { reaction = 4 }
-local function hideAll() return { hideNpcHealthBars = true, hideNpcNames = true, hideMinionHealthBars = true, hideMinionNames = true } end
+local function hideAll() return { hideNpcHealthBars = true, hideNpcNames = true, hideNeutralHealthBars = true,
+    hideNeutralNames = true, hideMinionHealthBars = true, hideMinionNames = true } end
 
-test("all four off by default: every nameplate as the game draws it", function()
+test("all six off by default: every nameplate as the game draws it", function()
     boot(true, nil, false, allNameplatesOn)
     enterWorld()
-    for _, key in ipairs({ "hideNpcHealthBars", "hideNpcNames", "hideMinionHealthBars", "hideMinionNames" }) do
+    for _, key in ipairs({ "hideNpcHealthBars", "hideNpcNames", "hideNeutralHealthBars", "hideNeutralNames", "hideMinionHealthBars", "hideMinionNames" }) do
         eq(GamepadReticleOnTargetDB[key], false, key)
     end
     eq(looks(addPlate("nameplate1", FRIENDLY_NPC)), "1 1"); eq(looks(addPlate("nameplate2", FRIENDLY_MINION)), "1 1")
@@ -623,7 +624,7 @@ test("all four on: friendly NPCs and minions fully hidden; players, enemies and 
     eq(npc.alpha, 1, "the nameplate itself untouched")
     eq(looks(addPlate("nameplate3", FRIENDLY_PLAYER)), "1 1", "a friendly player")
     eq(looks(addPlate("nameplate4", ENEMY_NPC)), "1 1", "an enemy")
-    eq(looks(addPlate("nameplate5", NEUTRAL_NPC)), "1 1", "a neutral NPC")
+    eq(looks(addPlate("nameplate5", NEUTRAL_NPC)), "0 0", "a neutral NPC: its own boxes, also on here")
 end)
 
 test("turned off, a part gets its own alpha back", function()
@@ -674,8 +675,22 @@ test("laid out as the game's Nameplates options: a heading per group, its boxes 
         elseif row.checkbox then rows[#rows + 1] = (row.indented and "  " or "") .. row.checkbox end
     end
     eq(table.concat(rows, ", "), "enabled, # Friendly NPC Nameplates,   hideNpcHealthBars,   hideNpcNames, "
+        .. "# Neutral NPC Nameplates,   hideNeutralHealthBars,   hideNeutralNames, "
         .. "# Friendly Player Minions,   hideMinionHealthBars,   hideMinionNames")
     eq(game.settings.GamepadReticleOnTarget_hideMinionNames ~= nil, true)
+end)
+
+test("neutral NPCs: their own two boxes; enemies and others' minions never touched", function()
+    boot(true, nil, false, allNameplatesOn)
+    enterWorld()
+    local neutral, npc = addPlate("nameplate1", NEUTRAL_NPC), addPlate("nameplate2", FRIENDLY_NPC)
+    local enemy = addPlate("nameplate3", ENEMY_NPC)
+    local enemyMinion = addPlate("nameplate4", { reaction = 4, controlled = true })
+    set("hideNeutralHealthBars", true)
+    eq(looks(neutral), "0 1", "neutral: bar hidden"); eq(looks(npc), "1 1", "friendly NPC untouched")
+    set("hideNeutralNames", true)
+    eq(looks(neutral), "0 0")
+    eq(looks(enemy), "1 1", "an enemy, never"); eq(looks(enemyMinion), "1 1", "a neutral player's minion, never")
 end)
 
 reportLine(passed .. " passed, " .. failed .. " failed")

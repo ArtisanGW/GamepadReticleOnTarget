@@ -7,7 +7,7 @@
 --   Reticle.lua                  where the reticle goes, and when it's placed again
 --   Popup.lua                    a popup in the game's style
 --   Nameplates.lua               asks to turn on the nameplates the reticle sits under
---   NameplateHiding.lua          hides health bars or names on friendly NPCs' and minions' nameplates
+--   NameplateHiding.lua          hides health bars or names on friendly and neutral NPCs' and minions' nameplates
 --   RelatedAddons.lua             hints for our other controller addons
 --   Debug.lua                    /grt debug, the in-game test suite (not in the release)
 local ADDON_NAME = ...
@@ -19,9 +19,11 @@ local ReticleOnTarget = {
     --          size on screen at any distance, so a pixel offset puts the dot at the
     --          same place on it.
     -- hideNpcHealthBars, hideNpcNames, hideMinionHealthBars, hideMinionNames: that part
-    --          of friendly NPCs' and minions' nameplates hidden (NameplateHiding.lua).
+    --          of friendly NPCs', neutral NPCs' and minions' nameplates hidden
+    --          (NameplateHiding.lua); hideNeutralHealthBars, hideNeutralNames too.
     --          Off by default: the addon never changes how the game looks unless asked.
     DEFAULTS = { enabled = true, offset = 0, hideNpcHealthBars = false, hideNpcNames = false,
+        hideNeutralHealthBars = false, hideNeutralNames = false,
         hideMinionHealthBars = false, hideMinionNames = false },
     OFFSET_MIN = -200, OFFSET_MAX = 200, OFFSET_STEP = 5,
 }
@@ -113,6 +115,9 @@ function ReticleOnTarget.RegisterSettings()
     addHeading("Friendly NPC Nameplates")
     addHideSetting("hideNpcHealthBars", "Hide health bars", "the health bar", "friendly NPCs")
     addHideSetting("hideNpcNames", "Hide names", "the name", "friendly NPCs")
+    addHeading("Neutral NPC Nameplates")
+    addHideSetting("hideNeutralHealthBars", "Hide health bars", "the health bar", "neutral NPCs, critters too")
+    addHideSetting("hideNeutralNames", "Hide names", "the name", "neutral NPCs, critters too")
     addHeading("Friendly Player Minions")
     addHideSetting("hideMinionHealthBars", "Hide health bars", "the health bar", "friendly players' minions (pets, guardians, totems, yours too)")
     addHideSetting("hideMinionNames", "Hide names", "the name", "friendly players' minions (pets, guardians, totems, yours too)")

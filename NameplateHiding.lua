@@ -1,4 +1,4 @@
--- Hides parts of the nameplates of friendly NPCs and of friendly players' minions
+-- Hides parts of the nameplates of friendly NPCs, neutral NPCs and friendly players' minions
 -- (their pets, guardians and totems, yours too, as the game's Nameplates options
 -- call them): their health bar, their name, or both, each with its own setting,
 -- all off by default. The reticle needs a nameplate to sit under, so they stay
@@ -14,9 +14,11 @@ local ReticleOnTarget = _G.GamepadReticleOnTarget
 local NameplateHiding = {
     EVENTS = { "NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED", "UNIT_FACTION" },
     FRIENDLY_REACTION = 5,   -- UnitReaction: 5 and up is friendly
+    NEUTRAL_REACTION = 4,
     -- The setting that hides each part, by kind of unit.
     SETTINGS = {
         npc = { healthBar = "hideNpcHealthBars", name = "hideNpcNames" },
+        neutral = { healthBar = "hideNeutralHealthBars", name = "hideNeutralNames" },
         minion = { healthBar = "hideMinionHealthBars", name = "hideMinionNames" },
     },
 }
@@ -30,21 +32,23 @@ local function readable(value)
     return value
 end
 
-local function isFriendly(unit)
-    if type(UnitReaction) ~= "function" then return false end
-    local reaction = tonumber(readable(UnitReaction(unit, "player")))
-    return reaction ~= nil and reaction >= NameplateHiding.FRIENDLY_REACTION
+local function reactionTo(unit)
+    if type(UnitReaction) ~= "function" then return nil end
+    return tonumber(readable(UnitReaction(unit, "player")))
 end
 
--- What kind of unit a nameplate shows: "npc" (a friendly NPC), "minion" (a friendly
--- player's pet, guardian or totem) or nil (anything else: players, enemies,
--- neutral NPCs).
+-- What kind of unit a nameplate shows: "npc" (a friendly NPC), "neutral" (a neutral
+-- NPC: yellow, critters too), "minion" (a friendly player's pet, guardian or
+-- totem) or nil (anything else: players, enemies, others' minions).
 function NameplateHiding.Kind(unit)
     if type(UnitExists) ~= "function" or readable(UnitExists(unit)) ~= true then return nil end
     if type(UnitIsPlayer) == "function" and readable(UnitIsPlayer(unit)) == true then return nil end
-    if not isFriendly(unit) then return nil end
+    local reaction = reactionTo(unit)
+    if not reaction then return nil end
     local controlledByPlayer = type(UnitPlayerControlled) == "function" and readable(UnitPlayerControlled(unit)) == true
-    return controlledByPlayer and "minion" or "npc"
+    if reaction >= NameplateHiding.FRIENDLY_REACTION then return controlledByPlayer and "minion" or "npc" end
+    if reaction == NameplateHiding.NEUTRAL_REACTION and not controlledByPlayer then return "neutral" end
+    return nil
 end
 
 -- Whether a part ("healthBar" or "name") of a unit's nameplate should be hidden.
