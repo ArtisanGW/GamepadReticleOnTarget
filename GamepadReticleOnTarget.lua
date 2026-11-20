@@ -7,7 +7,7 @@
 --   Reticle.lua                  where the reticle goes, and when it's placed again
 --   Popup.lua                    a popup in the game's style
 --   Nameplates.lua               asks to turn on the nameplates the reticle sits under
---   NameplateHiding.lua          names only on friendly NPCs' and pets' nameplates
+--   NameplateHiding.lua          hides health bars or names on friendly NPCs' and pets' nameplates
 --   RelatedAddons.lua             hints for our other controller addons
 --   Debug.lua                    /grt debug, the in-game test suite (not in the release)
 local ADDON_NAME = ...
@@ -18,10 +18,11 @@ local ReticleOnTarget = {
     --          (up) screen pixels. Pixels, not a percentage: a nameplate keeps its
     --          size on screen at any distance, so a pixel offset puts the dot at the
     --          same place on it.
-    -- npcNamesOnly, petNamesOnly: friendly NPCs' and pets' nameplates show their
-    --          name without the health bar (NameplateHiding.lua). Off by default: the
-    --          addon never changes how the game looks unless asked.
-    DEFAULTS = { enabled = true, offset = 0, npcNamesOnly = false, petNamesOnly = false },
+    -- hideNpcHealthBars, hideNpcNames, hidePetHealthBars, hidePetNames: that part
+    --          of friendly NPCs' and pets' nameplates hidden (NameplateHiding.lua).
+    --          Off by default: the addon never changes how the game looks unless asked.
+    DEFAULTS = { enabled = true, offset = 0, hideNpcHealthBars = false, hideNpcNames = false,
+        hidePetHealthBars = false, hidePetNames = false },
     OFFSET_MIN = -200, OFFSET_MAX = 200, OFFSET_STEP = 5,
 }
 _G.GamepadReticleOnTarget = ReticleOnTarget
@@ -97,12 +98,15 @@ function ReticleOnTarget.RegisterSettings()
         sliderOptions(ReticleOnTarget.OFFSET_MIN, ReticleOnTarget.OFFSET_MAX, ReticleOnTarget.OFFSET_STEP,
             ReticleOnTarget.OffsetLabel))
     local function refreshHiding() ReticleOnTarget.NameplateHiding.Refresh() end
-    addSetting("npcNamesOnly", Settings.VarType.Boolean, "NPC names only",
-        "Friendly NPCs' nameplates show their name, without the health bar.\n\n"
-        .. "The reticle still goes on them. Turned off, the bars show again.", nil, refreshHiding)
-    addSetting("petNamesOnly", Settings.VarType.Boolean, "Pet names only",
-        "The nameplates of friendly players' pets, yours too, show their name, without the health bar.\n\n"
-        .. "The reticle still goes on them. Turned off, the bars show again.", nil, refreshHiding)
+    local PETS = "friendly players' pets, yours too"
+    local function addHideSetting(key, label, what)
+        addSetting(key, Settings.VarType.Boolean, label, "Hides " .. what .. ".\n\n"
+            .. "The reticle still goes on them. Turned off, it shows again.", nil, refreshHiding)
+    end
+    addHideSetting("hideNpcHealthBars", "Hide NPC health bars", "the health bar on friendly NPCs' nameplates")
+    addHideSetting("hideNpcNames", "Hide NPC names", "the name on friendly NPCs' nameplates")
+    addHideSetting("hidePetHealthBars", "Hide pet health bars", "the health bar on the nameplates of " .. PETS)
+    addHideSetting("hidePetNames", "Hide pet names", "the name on the nameplates of " .. PETS)
 
     if ReticleOnTarget.AddNameplatesButton then ReticleOnTarget.AddNameplatesButton(layout) end   -- Nameplates.lua
     if ReticleOnTarget.AddRelatedAddonButtons then ReticleOnTarget.AddRelatedAddonButtons(layout) end   -- RelatedAddons.lua

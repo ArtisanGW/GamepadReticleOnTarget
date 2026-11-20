@@ -554,11 +554,11 @@ test("a Get button for each missing sibling, in order, each with its own CurseFo
     eq(_G.GamepadReticleOnTargetPopup.editBox:GetText(), "https://www.curseforge.com/projects/1818297")
 end)
 
--- Names only on friendly NPCs' and pets' nameplates
+-- Hiding health bars and names on friendly NPCs' and pets' nameplates
 
 -- A nameplate on screen for a unit: its UnitFrame with a health bar container and
 -- a name, each with an alpha, as the game's.
-local function addPlate(unit, kind, alpha)
+local function addPlate(unit, kind, barAlpha)
     local function part(startAlpha)
         local region = { alpha = startAlpha or 1 }
         function region:SetAlpha(value) self.alpha = value end
@@ -567,68 +567,81 @@ local function addPlate(unit, kind, alpha)
     end
     local unitFrame = part(1)
     unitFrame.unit = unit
-    unitFrame.HealthBarsContainer = part(alpha)
+    unitFrame.HealthBarsContainer = part(barAlpha)
     unitFrame.name = part(1)
     game.nameplates[unit] = { UnitFrame = unitFrame }
     game.unitKinds[unit] = kind
     game.fire("NAME_PLATE_UNIT_ADDED", unit)
-    return unitFrame.HealthBarsContainer, unitFrame
+    return unitFrame
 end
+-- "bar name" alphas of a plate, e.g. "0 1".
+local function looks(unitFrame) return unitFrame.HealthBarsContainer.alpha .. " " .. unitFrame.name.alpha end
 local FRIENDLY_NPC = { reaction = 5 }
 local FRIENDLY_PET = { reaction = 5, controlled = true }
 local FRIENDLY_PLAYER = { reaction = 5, player = true, controlled = true }
 local ENEMY_NPC = { reaction = 2 }
 local NEUTRAL_NPC = { reaction = 4 }
-local namesOnly = { npcNamesOnly = true, petNamesOnly = true }
+local function hideAll() return { hideNpcHealthBars = true, hideNpcNames = true, hidePetHealthBars = true, hidePetNames = true } end
 
-test("off by default: every nameplate as the game draws it", function()
+test("all four off by default: every nameplate as the game draws it", function()
     boot(true, nil, false, allNameplatesOn)
     enterWorld()
-    eq(GamepadReticleOnTargetDB.npcNamesOnly, false); eq(GamepadReticleOnTargetDB.petNamesOnly, false)
-    local npcBar, petBar = addPlate("nameplate1", FRIENDLY_NPC), addPlate("nameplate2", FRIENDLY_PET)
-    eq(npcBar.alpha, 1); eq(petBar.alpha, 1)
+    for _, key in ipairs({ "hideNpcHealthBars", "hideNpcNames", "hidePetHealthBars", "hidePetNames" }) do
+        eq(GamepadReticleOnTargetDB[key], false, key)
+    end
+    eq(looks(addPlate("nameplate1", FRIENDLY_NPC)), "1 1"); eq(looks(addPlate("nameplate2", FRIENDLY_PET)), "1 1")
 end)
 
-test("turned on: friendly NPCs and pets keep their name, without the health bar; others keep theirs", function()
-    boot(true, namesOnly, false, allNameplatesOn)
+test("each of the four on its own: only its part, only on its kind of unit", function()
+    boot(true, nil, false, allNameplatesOn)
     enterWorld()
-    local npcBar, npcFrame = addPlate("nameplate1", FRIENDLY_NPC)
-    local petBar = addPlate("nameplate2", FRIENDLY_PET)
-    local playerBar, enemyBar, neutralBar = addPlate("nameplate3", FRIENDLY_PLAYER), addPlate("nameplate4", ENEMY_NPC),
-        addPlate("nameplate5", NEUTRAL_NPC)
-    eq(npcBar.alpha, 0, "friendly NPC: no bar"); eq(npcFrame.name.alpha, 1, "its name kept")
-    eq(npcFrame.alpha, 1, "the nameplate itself untouched")
-    eq(petBar.alpha, 0, "a friendly player's pet: no bar")
-    eq(playerBar.alpha, 1, "a friendly player"); eq(enemyBar.alpha, 1, "an enemy"); eq(neutralBar.alpha, 1, "a neutral NPC")
+    local npc, pet = addPlate("nameplate1", FRIENDLY_NPC), addPlate("nameplate2", FRIENDLY_PET)
+    set("hideNpcHealthBars", true)
+    eq(looks(npc), "0 1", "NPC: bar hidden, name kept"); eq(looks(pet), "1 1", "pet untouched")
+    set("hideNpcHealthBars", false); set("hideNpcNames", true)
+    eq(looks(npc), "1 0", "NPC: name hidden, bar kept")
+    set("hideNpcNames", false); set("hidePetHealthBars", true)
+    eq(looks(pet), "0 1", "pet: bar hidden"); eq(looks(npc), "1 1", "NPC untouched")
+    set("hidePetHealthBars", false); set("hidePetNames", true)
+    eq(looks(pet), "1 0", "pet: name hidden")
+    set("hidePetNames", false)
+    eq(looks(pet), "1 1"); eq(looks(npc), "1 1")
 end)
 
-test("each checkbox on its own; turned off, the bars get their own alpha back", function()
-    boot(true, namesOnly, false, allNameplatesOn)
+test("all four on: friendly NPCs and pets fully hidden; players, enemies and neutral ones untouched", function()
+    boot(true, hideAll(), false, allNameplatesOn)
     enterWorld()
-    local npcBar, petBar = addPlate("nameplate1", FRIENDLY_NPC, 0.8), addPlate("nameplate2", FRIENDLY_PET)
-    set("npcNamesOnly", false)
-    eq(npcBar.alpha, 0.8, "the NPC's own alpha back"); eq(petBar.alpha, 0, "pets still names only")
-    set("petNamesOnly", false)
-    eq(petBar.alpha, 1)
-    set("npcNamesOnly", true)
-    eq(npcBar.alpha, 0, "names only again")
+    local npc, pet = addPlate("nameplate1", FRIENDLY_NPC), addPlate("nameplate2", FRIENDLY_PET)
+    eq(looks(npc), "0 0"); eq(looks(pet), "0 0")
+    eq(npc.alpha, 1, "the nameplate itself untouched")
+    eq(looks(addPlate("nameplate3", FRIENDLY_PLAYER)), "1 1", "a friendly player")
+    eq(looks(addPlate("nameplate4", ENEMY_NPC)), "1 1", "an enemy")
+    eq(looks(addPlate("nameplate5", NEUTRAL_NPC)), "1 1", "a neutral NPC")
 end)
 
-test("a nameplate going back to the game's pool gets its alpha back; a unit changing sides is checked again", function()
-    boot(true, namesOnly, false, allNameplatesOn)
+test("turned off, a part gets its own alpha back", function()
+    boot(true, hideAll(), false, allNameplatesOn)
     enterWorld()
-    local npcBar = addPlate("nameplate1", FRIENDLY_NPC)
+    local npc = addPlate("nameplate1", FRIENDLY_NPC, 0.8)
+    set("hideNpcHealthBars", false)
+    eq(npc.HealthBarsContainer.alpha, 0.8, "its own alpha back"); eq(npc.name.alpha, 0, "the name still hidden")
+end)
+
+test("a nameplate going back to the game's pool gets its alphas back; a unit changing sides is checked again", function()
+    boot(true, hideAll(), false, allNameplatesOn)
+    enterWorld()
+    local npc = addPlate("nameplate1", FRIENDLY_NPC)
     game.fire("NAME_PLATE_UNIT_REMOVED", "nameplate1")
-    eq(npcBar.alpha, 1, "given back before the game reuses it")
-    local turningBar = addPlate("nameplate2", FRIENDLY_NPC)
-    eq(turningBar.alpha, 0)
+    eq(looks(npc), "1 1", "given back before the game reuses it")
+    local turning = addPlate("nameplate2", FRIENDLY_NPC)
+    eq(looks(turning), "0 0")
     game.unitKinds.nameplate2 = ENEMY_NPC
     game.fire("UNIT_FACTION", "nameplate2")
-    eq(turningBar.alpha, 1, "now an enemy: its bar shown")
+    eq(looks(turning), "1 1", "now an enemy: shown")
 end)
 
-test("the reticle still goes on a friendly NPC showing its name only", function()
-    boot(true, namesOnly, false, allNameplatesOn)
+test("the reticle still goes on a friendly NPC whose nameplate is fully hidden", function()
+    boot(true, hideAll(), false, allNameplatesOn)
     enterWorld()
     addPlate("nameplate1", FRIENDLY_NPC)
     game.units.target = true; game.nameplates.target = game.nameplates.nameplate1
@@ -637,13 +650,13 @@ test("the reticle still goes on a friendly NPC showing its name only", function(
 end)
 
 test("a nameplate the game locks for addons is left alone", function()
-    boot(true, namesOnly, false, allNameplatesOn)
+    boot(true, hideAll(), false, allNameplatesOn)
     enterWorld()
-    local npcBar, npcFrame = addPlate("nameplate1", FRIENDLY_NPC)
-    npcBar.alpha = 1
-    function npcFrame:IsForbidden() return true end
+    local npc = addPlate("nameplate1", FRIENDLY_NPC)
+    npc.HealthBarsContainer.alpha, npc.name.alpha = 1, 1
+    function npc:IsForbidden() return true end
     game.fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
-    eq(npcBar.alpha, 1, "not touched")
+    eq(looks(npc), "1 1", "not touched")
 end)
 
 reportLine(passed .. " passed, " .. failed .. " failed")
