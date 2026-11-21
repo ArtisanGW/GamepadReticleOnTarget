@@ -2,7 +2,7 @@
 
 ## 1.1.1
 
-- New icon: a rounded nameplate with the reticle just below it
+- New icon: an orc vendor under a nameplate, with the reticle just above it
 
 ## 1.1.0
 
