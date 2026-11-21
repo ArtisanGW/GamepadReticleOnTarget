@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Gamepad Reticle On Target: the reticle, the game's white dot, sits just above the nameplate (a rounded health bar)
+       of the target below it, here an orc vendor seen from the front.
+       Palette as Alt Courier's icon: navy, teal, pastel pink, yellow and brown, plus pastel green, steel and ivory. -->
+  <rect x="0" y="0" width="512" height="512" fill="#15202E"/>
+
+  <!-- the reticle: the game's white dot -->
+  <circle cx="256" cy="62" r="22" fill="#FFFFFF"/>
+  <!-- the nameplate: a pill with its health bar, mostly full -->
+  <rect x="136" y="106" width="240" height="60" rx="30" fill="none" stroke="#5BE0C8" stroke-width="14"/>
+  <rect x="156" y="124" width="144" height="24" rx="12" fill="#F4A7B9"/>
+
+  <g transform="translate(0,28)">
+  <!-- the vendor's apron, with a coin on it -->
+  <path d="M 190 372 H 322 L 344 512 H 168 Z" fill="#F6D98B"/>
+  <path d="M 214 446 H 298 V 478 Q 256 492 214 478 Z" fill="none" stroke="#D9A93F" stroke-width="6" stroke-linejoin="round"/>
+  <circle cx="256" cy="420" r="17" fill="none" stroke="#D9A93F" stroke-width="6"/>
+  <circle cx="256" cy="420" r="5" fill="#D9A93F"/>
+  <!-- neck and bare shoulders -->
+  <rect x="228" y="340" width="56" height="44" rx="16" fill="#A9D98F"/>
+  <rect x="116" y="368" width="92" height="84" rx="38" fill="#A9D98F"/>
+  <rect x="304" y="368" width="92" height="84" rx="38" fill="#A9D98F"/>
+
+  <!-- pointed ears -->
+  <g fill="#A9D98F">
+    <path d="M 192 296 L 160 262 L 198 276 Z"/>
+    <path d="M 320 296 L 352 262 L 314 276 Z"/>
+  </g>
+  <!-- the head: broad and round -->
+  <ellipse cx="256" cy="298" rx="72" ry="64" fill="#A9D98F"/>
+  <!-- brown mohawk -->
+  <path d="M 226 248 C 222 210 244 192 256 188 C 268 192 290 210 286 248 C 276 236 266 232 256 232 C 246 232 236 236 226 248 Z" fill="#B58E6C"/>
+  <path d="M 256 196 V 230" fill="none" stroke="#8A6548" stroke-width="5" stroke-linecap="round"/>
+  <!-- heavy brow, small eyes, a flat nose, and tusks -->
+  <g fill="none" stroke="#15202E" stroke-linecap="round">
+    <path d="M 214 290 L 242 298" stroke-width="8"/><path d="M 298 290 L 270 298" stroke-width="8"/>
+    <path d="M 250 314 H 262" stroke-width="5"/>
+    <path d="M 232 342 Q 256 352 280 342" stroke-width="6"/>
+  </g>
+  <circle cx="234" cy="306" r="6" fill="#15202E"/><circle cx="278" cy="306" r="6" fill="#15202E"/>
+  <g fill="#F3EBD2">
+    <path d="M 226 344 L 224 318 L 240 338 Z"/>
+    <path d="M 286 344 L 288 318 L 272 338 Z"/>
+  </g>
+  </g>
+</svg>

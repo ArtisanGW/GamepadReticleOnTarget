@@ -16,10 +16,20 @@
   <path d="M 214 446 H 298 V 478 Q 256 492 214 478 Z" fill="none" stroke="#D9A93F" stroke-width="6" stroke-linejoin="round"/>
   <circle cx="256" cy="420" r="17" fill="none" stroke="#D9A93F" stroke-width="6"/>
   <circle cx="256" cy="420" r="5" fill="#D9A93F"/>
-  <!-- neck and bare shoulders -->
+  <!-- neck, and arms close to the body, hanging down alongside the apron, ending in hands -->
   <rect x="228" y="340" width="56" height="44" rx="16" fill="#A9D98F"/>
-  <rect x="116" y="368" width="92" height="84" rx="38" fill="#A9D98F"/>
-  <rect x="304" y="368" width="92" height="84" rx="38" fill="#A9D98F"/>
+  <g fill="none" stroke="#A9D98F" stroke-width="46" stroke-linecap="round">
+    <path d="M 180 394 L 168 438"/>
+    <path d="M 332 394 L 344 438"/>
+  </g>
+  <g fill="#A9D98F">
+    <circle cx="166" cy="446" r="27"/>
+    <circle cx="346" cy="446" r="27"/>
+  </g>
+  <g fill="none" stroke="#15202E" stroke-width="4" stroke-linecap="round">
+    <path d="M 180 436 L 183 458 M 193 436 L 195 452"/>
+    <path d="M 332 436 L 329 458 M 319 436 L 317 452"/>
+  </g>
 
   <!-- pointed ears -->
   <g fill="#A9D98F">
