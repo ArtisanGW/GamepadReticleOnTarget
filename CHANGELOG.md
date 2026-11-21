@@ -1,5 +1,9 @@
 # Gamepad Reticle On Target
 
+## 1.1.3
+
+- The icon's orc vendor has its mohawk on its head, not floating above it
+
 ## 1.1.2
 
 - The icon's orc vendor now wears a tunic with short sleeves, and its arms run off the bottom of the icon
