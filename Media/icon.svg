@@ -31,6 +31,16 @@
   <path d="M 214 446 H 298 V 478 Q 256 492 214 478 Z" fill="none" stroke="#D9A93F" stroke-width="6" stroke-linejoin="round"/>
   <circle cx="256" cy="420" r="17" fill="none" stroke="#D9A93F" stroke-width="6"/>
   <circle cx="256" cy="420" r="5" fill="#D9A93F"/>
+  <!-- short sleeves of the tunic, covering the start of the arms -->
+  <g fill="#F6D98B">
+    <rect x="148" y="364" width="66" height="60" rx="26" transform="rotate(-8 181 394)"/>
+    <rect x="298" y="364" width="66" height="60" rx="26" transform="rotate(8 331 394)"/>
+  </g>
+  <g fill="none" stroke="#D9A93F" stroke-width="5" stroke-linecap="round">
+    <path d="M 158 416 Q 182 426 206 414"/>
+    <path d="M 354 416 Q 330 426 306 414"/>
+  </g>
+
   <!-- pointed ears -->
   <g fill="#A9D98F">
     <path d="M 192 296 L 160 262 L 198 276 Z"/>
