@@ -1,5 +1,9 @@
 # Gamepad Reticle On Target
 
+## 1.1.1
+
+- New icon: a rounded nameplate with the reticle just below it
+
 ## 1.1.0
 
 - The reticle now sits where the game shows its interaction icon on your target, just above the nameplate; Vertical offset counts from there
