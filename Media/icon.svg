@@ -14,29 +14,25 @@
   <!-- the neck, and arms hanging close to the body, coming out from behind the apron, ending in hands -->
   <rect x="228" y="340" width="56" height="44" rx="16" fill="#A9D98F"/>
   <g fill="none" stroke="#A9D98F" stroke-width="46" stroke-linecap="round">
-    <path d="M 180 394 L 168 438"/>
-    <path d="M 332 394 L 344 438"/>
+    <path d="M 178 416 L 168 444"/>
+    <path d="M 334 416 L 344 444"/>
   </g>
   <g fill="#A9D98F">
-    <circle cx="166" cy="446" r="27"/>
-    <circle cx="346" cy="446" r="27"/>
+    <circle cx="166" cy="450" r="27"/>
+    <circle cx="346" cy="450" r="27"/>
   </g>
   <g fill="none" stroke="#15202E" stroke-width="4" stroke-linecap="round">
-    <path d="M 180 436 L 183 458 M 193 436 L 195 452"/>
-    <path d="M 332 436 L 329 458 M 319 436 L 317 452"/>
+    <path d="M 180 440 L 183 462 M 193 440 L 195 456"/>
+    <path d="M 332 440 L 329 462 M 319 440 L 317 456"/>
   </g>
 
-  <!-- short sleeves of the tunic, covering the start of the arms; the chest is drawn over their inner ends, so the shoulders slope smoothly -->
-  <g fill="#F6D98B">
-    <rect x="148" y="382" width="68" height="54" rx="27" transform="rotate(-24 182 409)"/>
-    <rect x="296" y="382" width="68" height="54" rx="27" transform="rotate(24 330 409)"/>
-  </g>
+  <!-- the vendor's tunic: one piece, from the neckline over sloping shoulders into short sleeves, with a coin and a pocket -->
+  <path d="M 184 512 L 194 446 Q 170 456 144 438 C 130 418 140 396 162 390 C 190 382 212 372 232 372 Q 256 392 280 372 C 300 372 322 382 350 390 C 372 396 382 418 368 438 Q 342 456 318 446 L 328 512 Z" fill="#F6D98B"/>
   <g fill="none" stroke="#D9A93F" stroke-width="5" stroke-linecap="round">
-    <path d="M 156 432 Q 178 446 204 436"/>
-    <path d="M 356 432 Q 334 446 308 436"/>
+    <path d="M 149 440 Q 170 452 192 446"/>
+    <path d="M 363 440 Q 342 452 320 446"/>
+    <path d="M 234 374 Q 256 393 278 374"/>
   </g>
-  <!-- the vendor's tunic: a rounded chest, with a coin and a pocket on it -->
-  <path d="M 184 512 L 194 432 C 194 398 220 372 256 372 C 292 372 318 398 318 432 L 328 512 Z" fill="#F6D98B"/>
   <path d="M 214 446 H 298 V 478 Q 256 492 214 478 Z" fill="none" stroke="#D9A93F" stroke-width="6" stroke-linejoin="round"/>
   <circle cx="256" cy="420" r="17" fill="none" stroke="#D9A93F" stroke-width="6"/>
   <circle cx="256" cy="420" r="5" fill="#D9A93F"/>
