@@ -1,15 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Gamepad Reticle On Target: a rounded nameplate with a name and a health bar, the reticle, the game's white dot,
-       just below it. Palette as Alt Courier's icon: navy, teal, pastel pink and yellow, lilac. -->
+  <!-- Gamepad Reticle On Target: a rounded health bar, the nameplate, with the reticle, the game's white dot, just below it.
+       Palette as Alt Courier's icon: navy, teal and pastel pink. -->
   <rect x="0" y="0" width="512" height="512" fill="#15202E"/>
-  <g transform="translate(0,36)">
-  <!-- the name, with a level badge -->
-  <circle cx="132" cy="116" r="12" fill="#BBA9F0"/>
-  <path d="M 164 116 H 300" fill="none" stroke="#F6D98B" stroke-width="14" stroke-linecap="round"/>
   <!-- the nameplate: a pill with its health bar, mostly full -->
-  <rect x="92" y="148" width="328" height="76" rx="38" fill="none" stroke="#5BE0C8" stroke-width="16"/>
-  <rect x="116" y="172" width="212" height="28" rx="14" fill="#F4A7B9"/>
+  <rect x="92" y="167" width="328" height="76" rx="38" fill="none" stroke="#5BE0C8" stroke-width="16"/>
+  <rect x="116" y="191" width="212" height="28" rx="14" fill="#F4A7B9"/>
   <!-- the reticle: the game's white dot -->
-  <circle cx="256" cy="312" r="26" fill="#FFFFFF"/>
-  </g>
+  <circle cx="256" cy="327" r="26" fill="#FFFFFF"/>
 </svg>
