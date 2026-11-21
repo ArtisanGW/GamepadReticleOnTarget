@@ -11,19 +11,11 @@
   <rect x="150" y="141" width="150" height="10" rx="5" fill="#F4A7B9"/>
 
   <g transform="translate(0,28)">
-  <!-- the neck, and arms hanging close to the body, coming out from behind the apron, ending in hands -->
+  <!-- the neck, and arms hanging close to the body, coming out from behind the tunic and running off the bottom of the icon -->
   <rect x="228" y="340" width="56" height="44" rx="16" fill="#A9D98F"/>
   <g fill="none" stroke="#A9D98F" stroke-width="46" stroke-linecap="round">
-    <path d="M 178 416 L 168 444"/>
-    <path d="M 334 416 L 344 444"/>
-  </g>
-  <g fill="#A9D98F">
-    <circle cx="166" cy="450" r="27"/>
-    <circle cx="346" cy="450" r="27"/>
-  </g>
-  <g fill="none" stroke="#15202E" stroke-width="4" stroke-linecap="round">
-    <path d="M 180 440 L 183 462 M 193 440 L 195 456"/>
-    <path d="M 332 440 L 329 462 M 319 440 L 317 456"/>
+    <path d="M 178 416 L 160 520"/>
+    <path d="M 334 416 L 352 520"/>
   </g>
 
   <!-- the vendor's tunic: one piece, from the neckline over sloping shoulders into short sleeves, with a coin and a pocket -->

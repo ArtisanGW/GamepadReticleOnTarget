@@ -1,5 +1,9 @@
 # Gamepad Reticle On Target
 
+## 1.1.2
+
+- The icon's orc vendor now wears a tunic with short sleeves, and its arms run off the bottom of the icon
+
 ## 1.1.1
 
 - New icon: an orc vendor under a nameplate, with the reticle just above it
