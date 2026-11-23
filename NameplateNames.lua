@@ -99,11 +99,11 @@ local function titleOf(unitFrame)
     return titles[unitFrame]
 end
 
--- Gives a nameplate's name the world-name look, or takes it away (on false).
-function NameplateNames.Style(unitFrame, unit, on)
+-- Gives a nameplate's name the world-name look, or takes it away (worldLook false).
+function NameplateNames.Style(unitFrame, unit, worldLook)
     local name = unitFrame.name
     if type(name) ~= "table" or type(name.SetVertexColor) ~= "function" then return end
-    if not on then
+    if not worldLook then
         styled[unitFrame] = nil
         local color = nameColors[name]
         if color then
