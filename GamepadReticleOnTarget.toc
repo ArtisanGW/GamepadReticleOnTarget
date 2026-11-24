@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: Gamepad Reticle On Target
-## Notes: Puts the controller's reticle on your target's nameplate, so it stays on what you attack. Settings in Options > AddOns > Gamepad Reticle On Target, or /grt.
+## Notes: Puts the controller's reticle on your target's nameplate, so it stays on what you attack, and can show the soft target's tooltip. Settings in Options > AddOns > Gamepad Reticle On Target, or /grt.
 ## Author: Artisan
 ## Version: @project-version@
 #@debug@
@@ -19,6 +19,7 @@ Nameplates.lua
 NameplateNames.lua
 NameplateHiding.lua
 RelatedAddons.lua
+SoftTargetTooltip.lua
 #@do-not-package@
 # Development builds only: left out of the release (.pkgmeta)
 Debug.lua

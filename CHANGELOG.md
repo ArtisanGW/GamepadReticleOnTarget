@@ -1,5 +1,9 @@
 # Gamepad Reticle On Target
 
+## 1.2.0
+
+- New option, off by default: Tooltip on soft target. Shows the tooltip of the enemy or friend the controller picks, as the mouse does on a unit
+
 ## 1.1.4
 
 - Tidier code behind the scenes: nothing changes in game

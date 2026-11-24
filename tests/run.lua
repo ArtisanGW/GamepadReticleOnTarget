@@ -217,7 +217,7 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     game.printed = printed
     _G.print = function(text) printed[#printed + 1] = text end
     local namespace = {}
-    for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "NameplateNames.lua", "NameplateHiding.lua", "RelatedAddons.lua" }) do
+    for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "NameplateNames.lua", "NameplateHiding.lua", "RelatedAddons.lua", "SoftTargetTooltip.lua" }) do
         assert(loadfile(file))("GamepadReticleOnTarget", namespace)
     end
     if not releaseBuild then
@@ -536,7 +536,7 @@ test("the release leaves Debug.lua out; listed under Gamepad", function()
     for line in releaseToc:gmatch("[^\n]+") do
         if not line:find("^#") then loadedFiles[#loadedFiles + 1] = line end
     end
-    expectEqual(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,NameplateNames.lua,NameplateHiding.lua,RelatedAddons.lua")
+    expectEqual(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,NameplateNames.lua,NameplateHiding.lua,RelatedAddons.lua,SoftTargetTooltip.lua")
     expectEqual(toc:match("## Category: ([^\n]+)"), "Gamepad")
 end)
 
@@ -705,7 +705,7 @@ test("laid out as the game's Nameplates options: a heading per group, its boxes 
         if row.heading then rows[#rows + 1] = "# " .. row.heading
         elseif row.checkbox then rows[#rows + 1] = (row.indented and "  " or "") .. row.checkbox end
     end
-    expectEqual(table.concat(rows, ", "), "enabled, # Friendly NPC Nameplates,   hideNpcHealthBars,   hideNpcNames,   hideNpcLevels, "
+    expectEqual(table.concat(rows, ", "), "enabled, softTargetTooltip, # Friendly NPC Nameplates,   hideNpcHealthBars,   hideNpcNames,   hideNpcLevels, "
         .. "  npcWorldNames, # Neutral NPC Nameplates,   hideNeutralHealthBars,   hideNeutralNames,   hideNeutralLevels, "
         .. "  neutralWorldNames, # Friendly Player Minions,   hideMinionHealthBars,   hideMinionNames,   hideMinionLevels")
     expectEqual(game.settings.GamepadReticleOnTarget_hideMinionNames ~= nil, true)
@@ -880,6 +880,72 @@ test("a quest giver (the game draws its \"!\" above the head): the reticle below
     game.fire("PLAYER_TARGET_CHANGED"); runNextFrame()
     expectEqual(GamepadReticle.point.relativeTo, iconSpot, "a trainer: on the icon spot")
     _G.SetUnitCursorTexture = nil
+end)
+
+-- The game's tooltip, as far as the soft-target tooltip uses it.
+local function fakeTooltip()
+    local tooltip = { shown = false }
+    function tooltip:IsShown() return self.shown end
+    function tooltip:GetOwner() return self.owner end
+    function tooltip:SetUnit(unit) self.unit, self.shown = unit, true end
+    function tooltip:Hide() self.shown, self.unit, self.owner = false, nil, nil end
+    function tooltip:IsForbidden() return false end
+    _G.GameTooltip = tooltip
+    _G.UIParent = _G.UIParent or {}
+    _G.GameTooltip_SetDefaultAnchor = function(anchoredTooltip, parent) anchoredTooltip.owner = parent end
+    return tooltip
+end
+
+test("soft-target tooltip: off by default, nothing shown", function()
+    boot(true, nil)
+    local tooltip = fakeTooltip()
+    game.units.softenemy = true
+    game.fire("PLAYER_SOFT_ENEMY_CHANGED")
+    expectEqual(GamepadReticleOnTargetDB.softTargetTooltip, false, "default")
+    expectEqual(tooltip.shown, false, "tooltip shown")
+end)
+
+test("soft-target tooltip: the enemy first, then the friend, hidden when none", function()
+    boot(true, { softTargetTooltip = true })
+    local tooltip = fakeTooltip()
+    game.units.softfriend = true
+    game.fire("PLAYER_SOFT_FRIEND_CHANGED")
+    expectEqual(tooltip.unit, "softfriend", "friend")
+    expectEqual(tooltip.owner, UIParent, "at the game's default place")
+    game.units.softenemy = true
+    game.fire("PLAYER_SOFT_ENEMY_CHANGED")
+    expectEqual(tooltip.unit, "softenemy", "enemy first")
+    game.units.softenemy, game.units.softfriend = nil, nil
+    game.fire("PLAYER_SOFT_ENEMY_CHANGED")
+    expectEqual(tooltip.shown, false, "hidden")
+end)
+
+test("soft-target tooltip: a tooltip open for something else stays", function()
+    boot(true, { softTargetTooltip = true })
+    local tooltip = fakeTooltip()
+    local button = {}
+    tooltip.shown, tooltip.owner = true, button
+    game.units.softenemy = true
+    game.fire("PLAYER_SOFT_ENEMY_CHANGED")
+    expectEqual(tooltip.owner, button, "still the button's")
+    game.units.softenemy = nil
+    game.fire("PLAYER_SOFT_ENEMY_CHANGED")
+    expectEqual(tooltip.shown, true, "not hidden by us")
+end)
+
+test("soft-target tooltip: mouse UI or turned off, nothing shown; turning off hides ours", function()
+    boot(false, { softTargetTooltip = true })
+    local tooltip = fakeTooltip()
+    game.units.softenemy = true
+    game.fire("PLAYER_SOFT_ENEMY_CHANGED")
+    expectEqual(tooltip.shown, false, "mouse UI")
+    boot(true, { softTargetTooltip = true })
+    tooltip = fakeTooltip()
+    game.units.softenemy = true
+    game.fire("PLAYER_SOFT_ENEMY_CHANGED")
+    expectEqual(tooltip.unit, "softenemy", "shown")
+    set("softTargetTooltip", false)
+    expectEqual(tooltip.shown, false, "hidden when turned off")
 end)
 
 reportLine(passed .. " passed, " .. failed .. " failed")
