@@ -1,4 +1,5 @@
 **Summary:** Puts the controller's reticle on your target's nameplate, so it stays on what you attack.
+**Categories:** Combat, Unit Frames
 
 ## Description
 
