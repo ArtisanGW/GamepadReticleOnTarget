@@ -4,12 +4,14 @@
 local reportLine = print   -- the tests replace print to read what the addon says
 local failed, passed = 0, 0
 local only = os.getenv("GRT_TEST")
-local function test(name, fn)
+local function test(name, testBody)
     if only and not name:find(only, 1, true) then return end
-    local ok, err = xpcall(fn, debug.traceback)
+    local ok, err = xpcall(testBody, debug.traceback)
     if ok then passed = passed + 1 else failed = failed + 1; reportLine("FAIL " .. name .. "\n" .. err) end
 end
-local function eq(a, b, msg) if a ~= b then error((msg or "") .. ": expected " .. tostring(b) .. ", got " .. tostring(a), 2) end end
+local function expectEqual(actual, expected, message)
+    if actual ~= expected then error((message or "") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual), 2) end
+end
 
 local game
 -- releaseBuild: as in the release zip, without Debug.lua (see .pkgmeta).
@@ -34,21 +36,21 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     game.saved.nameplateShowFriendlyNpcs = nameplateOptions.npcs or "0"
     game.saved.nameplateShowFriendlyPlayerMinions = nameplateOptions.minions or "0"
     local function fire(event, ...)
-        for _, f in ipairs(game.frames) do if f.ev[event] and f.script then f.script(f, event, ...) end end
+        for _, fakeFrame in ipairs(game.frames) do if fakeFrame.ev[event] and fakeFrame.script then fakeFrame.script(fakeFrame, event, ...) end end
     end
     game.fire = fire
-    local function changed(n) fire("CVAR_UPDATE", n, _G.C_CVar.GetCVar(n)) end
+    local function changed(cvarName) fire("CVAR_UPDATE", cvarName, _G.C_CVar.GetCVar(cvarName)) end
     _G.C_CVar = {
-        GetCVar = function(n) if game.temp[n] ~= nil then return game.temp[n] end return game.saved[n] end,
-        SetCVar = function(n, v)
-            if nameplateOptions.refuse and n:find("^nameplate") then return false end
-            game.saved[n] = v; changed(n); return true
+        GetCVar = function(cvarName) if game.temp[cvarName] ~= nil then return game.temp[cvarName] end return game.saved[cvarName] end,
+        SetCVar = function(cvarName, value)
+            if nameplateOptions.refuse and cvarName:find("^nameplate") then return false end
+            game.saved[cvarName] = value; changed(cvarName); return true
         end,
-        SetTempCVar = function(n, v) game.temp[n] = v; changed(n) end,
-        RemoveTempCVar = function(n) game.temp[n] = nil; changed(n) end,
+        SetTempCVar = function(cvarName, value) game.temp[cvarName] = value; changed(cvarName) end,
+        RemoveTempCVar = function(cvarName) game.temp[cvarName] = nil; changed(cvarName) end,
     }
     _G.InputUtil = { IsGamepadUIEnabled = function() return gamepad end }
-    _G.C_Timer = { After = function(_, fn) game.timers[#game.timers + 1] = fn end }
+    _G.C_Timer = { After = function(_, callback) game.timers[#game.timers + 1] = callback end }
     local function newFakeRegion()
         local fakeRegion = {}
         for _, methodName in ipairs({ "SetAllPoints", "SetColorTexture", "SetPoint", "SetWidth", "SetSize", "SetFrameStrata", "RegisterForClicks", "EnableMouse",
@@ -99,18 +101,18 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
         RegisterVerticalLayoutCategory = function(name)
             return { name = name, GetID = function() return 42 end }, { AddInitializer = function(_, initializer) game.buttons[#game.buttons + 1] = initializer end }
         end,
-        RegisterAddOnSetting = function(cat, variable, key, tbl, kind, label, def)
-            if tbl[key] == nil then tbl[key] = def end
-            local s = { variable = variable, key = key, tbl = tbl }
-            game.settings[variable] = s
-            return s
+        RegisterAddOnSetting = function(category, variable, key, savedTable, kind, label, defaultValue)
+            if savedTable[key] == nil then savedTable[key] = defaultValue end
+            local setting = { variable = variable, key = key, tbl = savedTable }
+            game.settings[variable] = setting
+            return setting
         end,
-        SetOnValueChangedCallback = function(variable, fn) game.callbacks[variable] = fn end,
+        SetOnValueChangedCallback = function(variable, callback) game.callbacks[variable] = callback end,
         CreateColorSwatch = function(_, setting) game.swatch = setting end,
-        RegisterProxySetting = function(cat, variable, kind, label, def, getValue, setValue)
-            local s = { variable = variable, key = variable, label = label, getValue = getValue, setValue = setValue }
-            game.settings[variable] = s
-            return s
+        RegisterProxySetting = function(category, variable, kind, label, defaultValue, getValue, setValue)
+            local setting = { variable = variable, key = variable, label = label, getValue = getValue, setValue = setValue }
+            game.settings[variable] = setting
+            return setting
         end,
         CreateCheckbox = function(_, setting, tooltip)
             local initializer = { checkbox = setting.key, tooltip = tooltip }
@@ -119,35 +121,35 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
             return initializer
         end,
         CreateSlider = function(_, setting, options) game.options = game.options or {}; game.options[setting.key] = options end,
-        CreateSliderOptions = function(lo, hi, step)
-            return { lo = lo, hi = hi, SetLabelFormatter = function(self, _, fn) self.format = fn end }
+        CreateSliderOptions = function(minimum, maximum, step)
+            return { lo = minimum, hi = maximum, SetLabelFormatter = function(self, _, formatter) self.format = formatter end }
         end,
-        RegisterAddOnCategory = function(cat) game.category = cat end,
+        RegisterAddOnCategory = function(category) game.category = category end,
         OpenToCategory = function(id) game.opened = id end,
     }
     _G.SlashCmdList = {}
     _G.UIParent = { GetHeight = function() return 768 end }
     _G.GetCursorCenterPosition = function() return 0, 480 end
-    _G.issecretvalue = function(v) return type(v) == "table" and v.secret == true end
-    _G.hooksecurefunc = function(t, m, fn)
-        if type(t) == "string" then t, m, fn = _G, t, m end   -- the global form: hooksecurefunc("Name", fn)
-        local orig = t[m]; t[m] = function(...) local r = orig(...); fn(...); return r end
+    _G.issecretvalue = function(value) return type(value) == "table" and value.secret == true end
+    _G.hooksecurefunc = function(owner, methodName, hook)
+        if type(owner) == "string" then owner, methodName, hook = _G, owner, methodName end   -- the global form: hooksecurefunc("Name", fn)
+        local original = owner[methodName]; owner[methodName] = function(...) local result = original(...); hook(...); return result end
     end
     game.recenters = 0
     _G.GamepadReticle = {
         GetEffectiveScale = function() return 1.5 end,
         ClearAllPoints = function(self) self.point = nil end,
-        SetPoint = function(self, p, rel, rp, x, y) self.point = { p, rp, x, y, relativeTo = rel } end,
+        SetPoint = function(self, point, relativeFrame, relativePoint, x, y) self.point = { point, relativePoint, x, y, relativeTo = relativeFrame } end,
         -- Like the game: anchored to a nameplate (a restricted region), it can't be measured.
         GetPoint = function(self)
-            local q = self.point
-            if q and type(q.relativeTo) == "table" and q.relativeTo.restricted then
+            local anchor = self.point
+            if anchor and type(anchor.relativeTo) == "table" and anchor.relativeTo.restricted then
                 error("GamepadReticle:GetPoint(): Action[FrameMeasurement] failed because[Can't measure restricted regions]")
             end
-            if q then return q[1], q.relativeTo or UIParent, q[2], q[3], q[4] end
+            if anchor then return anchor[1], anchor.relativeTo or UIParent, anchor[2], anchor[3], anchor[4] end
         end,
         Recenter = function(self) game.recenters = game.recenters + 1; self.point = { "CENTER", "BOTTOM", 0, 320 } end,
-        Icons = { StandardIcon = { color = { 1, 1, 1, 1 }, SetVertexColor = function(self, r, g, b, a) self.color = { r, g, b, a } end } },
+        Icons = { StandardIcon = { color = { 1, 1, 1, 1 }, SetVertexColor = function(self, red, green, blue, alpha) self.color = { red, green, blue, alpha } end } },
     }
     -- Units and their nameplates: game.units[unit] = true, game.nameplates[unit] = a frame.
     game.units, game.nameplates = {}, {}
@@ -213,51 +215,51 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     _G.GamepadReticleOnTargetPopup = nil
     local printed = {}
     game.printed = printed
-    _G.print = function(t) printed[#printed + 1] = t end
-    local ns = {}
+    _G.print = function(text) printed[#printed + 1] = text end
+    local namespace = {}
     for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "NameplateNames.lua", "NameplateHiding.lua", "RelatedAddons.lua" }) do
-        assert(loadfile(file))("GamepadReticleOnTarget", ns)
+        assert(loadfile(file))("GamepadReticleOnTarget", namespace)
     end
-    if not releaseBuild then assert(loadfile("Debug.lua"))("GamepadReticleOnTarget", ns) end
+    if not releaseBuild then assert(loadfile("Debug.lua"))("GamepadReticleOnTarget", namespace) end
     fire("ADDON_LOADED", "GamepadReticleOnTarget")
 end
-local function frame() local t = game.timers; game.timers = {}; for _, fn in ipairs(t) do fn() end end
+local function runNextFrame() local dueTimers = game.timers; game.timers = {}; for _, timer in ipairs(dueTimers) do timer() end end
 local function set(key, value)
-    local s = game.settings["GamepadReticleOnTarget_" .. key]
-    s.tbl[s.key] = value
-    game.callbacks[s.variable](nil, s, value)
+    local setting = game.settings["GamepadReticleOnTarget_" .. key]
+    setting.tbl[setting.key] = value
+    game.callbacks[setting.variable](nil, setting, value)
 end
-local get = function(n) return C_CVar.GetCVar(n) end
+local get = function(cvarName) return C_CVar.GetCVar(cvarName) end
 
 
-local function near(a, b, msg) if math.abs(a - b) > 0.01 then error((msg or "") .. ": expected " .. b .. ", got " .. a, 2) end end
+local function near(actual, expected, message) if math.abs(actual - expected) > 0.01 then error((message or "") .. ": expected " .. expected .. ", got " .. actual, 2) end end
 local function onUpdateFramesShown()
     local count = 0
-    for _, f in ipairs(game.frames) do if f.update and f.shown then count = count + 1 end end
+    for _, fakeFrame in ipairs(game.frames) do if fakeFrame.update and fakeFrame.shown then count = count + 1 end end
     return count
 end
-local function enterWorld() game.fire("PLAYER_ENTERING_WORLD"); frame() end
+local function enterWorld() game.fire("PLAYER_ENTERING_WORLD"); runNextFrame() end
 
 test("registers its page under Options > AddOns, with the defaults; /grt and /gamepadreticleontarget open it", function()
     boot(true, nil)
-    eq(game.category.name, "Gamepad Reticle On Target")
-    eq(GamepadReticleOnTargetDB.enabled, true); eq(GamepadReticleOnTargetDB.offset, 0)
-    eq(game.options.offset.format(10), "10 px up"); eq(game.options.offset.format(-5), "5 px down"); eq(game.options.offset.format(0), "Default")
-    eq(SLASH_GAMEPADRETICLEONTARGET1, "/grt"); eq(SLASH_GAMEPADRETICLEONTARGET2, "/gamepadreticleontarget")
+    expectEqual(game.category.name, "Gamepad Reticle On Target")
+    expectEqual(GamepadReticleOnTargetDB.enabled, true); expectEqual(GamepadReticleOnTargetDB.offset, 0)
+    expectEqual(game.options.offset.format(10), "10 px up"); expectEqual(game.options.offset.format(-5), "5 px down"); expectEqual(game.options.offset.format(0), "Default")
+    expectEqual(SLASH_GAMEPADRETICLEONTARGET1, "/grt"); expectEqual(SLASH_GAMEPADRETICLEONTARGET2, "/gamepadreticleontarget")
     SlashCmdList.GAMEPADRETICLEONTARGET("")
-    eq(game.opened, 42)
+    expectEqual(game.opened, 42)
 end)
 
 test("controller, no target: the reticle stays where the game aims, with nothing per frame", function()
     boot(true, nil)
     enterWorld()
-    local p = GamepadReticle.point
-    near(p[3], 0, "x: the middle, where the controller's targeting aims")
-    near(p[4], 320, "the game's aim height (480 / scale 1.5)")
-    eq(GamepadReticle.point.relativeTo, UIParent)
+    local point = GamepadReticle.point
+    near(point[3], 0, "x: the middle, where the controller's targeting aims")
+    near(point[4], 320, "the game's aim height (480 / scale 1.5)")
+    expectEqual(GamepadReticle.point.relativeTo, UIParent)
     set("offset", 5)
     near(GamepadReticle.point[4], 320, "the vertical offset is for targets: no target, the game's own height")
-    eq(onUpdateFramesShown(), 0, "no frame runs every frame")
+    expectEqual(onUpdateFramesShown(), 0, "no frame runs every frame")
 end)
 
 test("controller, a target: the reticle goes under its nameplate, re-placed only when the target or plates change", function()
@@ -265,31 +267,31 @@ test("controller, a target: the reticle goes under its nameplate, re-placed only
     enterWorld()
     local targetPlate, softPlate = { name = "target's plate" }, { name = "soft target's plate" }
     game.units.softenemy = true; game.nameplates.softenemy = softPlate
-    game.fire("PLAYER_SOFT_ENEMY_CHANGED"); frame()
-    eq(GamepadReticle.point.relativeTo, softPlate, "no target of yours: the controller's soft target")
-    eq(GamepadReticle.point[2], "BOTTOM"); eq(GamepadReticle.point[4], -12, "just below the nameplate")
+    game.fire("PLAYER_SOFT_ENEMY_CHANGED"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, softPlate, "no target of yours: the controller's soft target")
+    expectEqual(GamepadReticle.point[2], "BOTTOM"); expectEqual(GamepadReticle.point[4], -12, "just below the nameplate")
     set("offset", -30)
     -- 30 px on a 1536 px tall screen: 15 of its 768 units, at the reticle's scale 1.5: 10
     near(GamepadReticle.point[4], -12 - 10, "the vertical offset: 30 px down from there")
     set("offset", 0)
     game.units.target = true; game.nameplates.target = targetPlate
-    game.fire("PLAYER_TARGET_CHANGED"); frame()
-    eq(GamepadReticle.point.relativeTo, targetPlate, "your target first")
+    game.fire("PLAYER_TARGET_CHANGED"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, targetPlate, "your target first")
     game.fire("PLAYER_TARGET_CHANGED"); game.fire("NAME_PLATE_UNIT_ADDED", "nameplate3")
-    eq(#game.timers, 2, "several reasons in one frame: placed once on the next frame, and once more a moment after the target change")
-    frame()
+    expectEqual(#game.timers, 2, "several reasons in one frame: placed once on the next frame, and once more a moment after the target change")
+    runNextFrame()
     game.nameplates.target = nil; game.nameplates.softenemy = nil
-    game.fire("NAME_PLATE_UNIT_REMOVED", "nameplate1"); frame()
-    eq(GamepadReticle.point.relativeTo, UIParent, "no nameplate left (off screen): back where the game aims")
+    game.fire("NAME_PLATE_UNIT_REMOVED", "nameplate1"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, UIParent, "no nameplate left (off screen): back where the game aims")
     game.nameplates.softenemy = softPlate
-    game.fire("NAME_PLATE_UNIT_ADDED", "nameplate2"); frame()
-    eq(GamepadReticle.point.relativeTo, UIParent,
+    game.fire("NAME_PLATE_UNIT_ADDED", "nameplate2"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, UIParent,
         "a target without a nameplate (a friend, friendly plates off): never jumps to the soft target")
     local friendPlate = { name = "friend's plate" }
     game.nameplates.target = friendPlate
-    game.fire("NAME_PLATE_UNIT_ADDED", "nameplate4"); frame()
-    eq(GamepadReticle.point.relativeTo, friendPlate, "with friendly plates on: on the friend")
-    eq(onUpdateFramesShown(), 0, "still nothing per frame: the game moves the nameplate, and the dot with it")
+    game.fire("NAME_PLATE_UNIT_ADDED", "nameplate4"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, friendPlate, "with friendly plates on: on the friend")
+    expectEqual(onUpdateFramesShown(), 0, "still nothing per frame: the game moves the nameplate, and the dot with it")
 end)
 
 test("the game's own Recenter (a resize) is followed by ours", function()
@@ -298,7 +300,7 @@ test("the game's own Recenter (a resize) is followed by ours", function()
     local targetPlate = {}
     game.units.target = true; game.nameplates.target = targetPlate
     GamepadReticle:Recenter()
-    eq(GamepadReticle.point.relativeTo, targetPlate, "put back on the target")
+    expectEqual(GamepadReticle.point.relativeTo, targetPlate, "put back on the target")
 end)
 
 test("keyboard at login, the controller later: the game's Recenter on the switch brings ours", function()
@@ -308,14 +310,14 @@ test("keyboard at login, the controller later: the game's Recenter on the switch
     enterWorld()
     local targetPlate = {}
     game.units.target = true; game.nameplates.target = targetPlate
-    game.fire("PLAYER_TARGET_CHANGED"); frame()
-    eq(GamepadReticle.point, nil, "keyboard: never touched")
+    game.fire("PLAYER_TARGET_CHANGED"); runNextFrame()
+    expectEqual(GamepadReticle.point, nil, "keyboard: never touched")
     controller = true
     GamepadReticle:Recenter()   -- the game's InitForGamepad
-    eq(GamepadReticle.point.relativeTo, targetPlate, "on the target")
+    expectEqual(GamepadReticle.point.relativeTo, targetPlate, "on the target")
     game.nameplates.target = nil
-    game.fire("NAME_PLATE_UNIT_REMOVED", "nameplate1"); frame()
-    eq(GamepadReticle.point.relativeTo, UIParent, "and its events listened to")
+    game.fire("NAME_PLATE_UNIT_REMOVED", "nameplate1"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, UIParent, "and its events listened to")
 end)
 
 test("turned off or on keyboard: the game's reticle is left alone", function()
@@ -323,18 +325,18 @@ test("turned off or on keyboard: the game's reticle is left alone", function()
     enterWorld()
     game.units.target = true; game.nameplates.target = {}
     set("enabled", false)
-    eq(GamepadReticle.point[3], 0, "recentered by the game's own code")
-    eq(GamepadReticle.point[4], 320)
-    game.fire("PLAYER_TARGET_CHANGED"); frame()
-    eq(GamepadReticle.point.relativeTo, nil, "and not put on the target")
-    eq(#game.timers, 0, "nothing queued while off")
+    expectEqual(GamepadReticle.point[3], 0, "recentered by the game's own code")
+    expectEqual(GamepadReticle.point[4], 320)
+    game.fire("PLAYER_TARGET_CHANGED"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, nil, "and not put on the target")
+    expectEqual(#game.timers, 0, "nothing queued while off")
 
     boot(false, nil)
     enterWorld()
     game.units.target = true; game.nameplates.target = {}
-    game.fire("PLAYER_TARGET_CHANGED"); frame()
-    eq(GamepadReticle.point, nil, "keyboard: never touched")
-    eq(game.recenters, 0)
+    game.fire("PLAYER_TARGET_CHANGED"); runNextFrame()
+    expectEqual(GamepadReticle.point, nil, "keyboard: never touched")
+    expectEqual(game.recenters, 0)
 end)
 
 test("the reticle goes under the part of the nameplate you see: health bar, else the name", function()
@@ -344,11 +346,11 @@ test("the reticle goes under the part of the nameplate you see: health bar, else
     local healthBar, name = part(true), part(true)
     local plate = { UnitFrame = { healthBar = healthBar, name = name } }
     game.units.target = true; game.nameplates.target = plate
-    game.fire("PLAYER_TARGET_CHANGED"); frame()
-    eq(GamepadReticle.point.relativeTo, healthBar, "under the health bar")
+    game.fire("PLAYER_TARGET_CHANGED"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, healthBar, "under the health bar")
     plate.UnitFrame.healthBar = part(false)
-    game.fire("NAME_PLATE_UNIT_ADDED", "nameplate1"); frame()
-    eq(GamepadReticle.point.relativeTo, name, "names only (a friendly player): under the name")
+    game.fire("NAME_PLATE_UNIT_ADDED", "nameplate1"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, name, "names only (a friendly player): under the name")
 end)
 
 -- Nameplates for "Reticle on your target"
@@ -375,90 +377,90 @@ test("first launch: a box says which nameplate settings are off; Turn on turns t
     boot(true, nil, false, { enemies = "1" })
     enterWorld()
     local box = nameplatesBox()
-    eq(box and box.shown, true, "the box")
-    eq(box.text.label:find("• friendly player nameplates\n• class colors on friendly player nameplates\n• friendly NPC nameplates\n• friendly player minions (pets, guardians, totems)", 1, true) ~= nil, true,
+    expectEqual(box and box.shown, true, "the box")
+    expectEqual(box.text.label:find("• friendly player nameplates\n• class colors on friendly player nameplates\n• friendly NPC nameplates\n• friendly player minions (pets, guardians, totems)", 1, true) ~= nil, true,
         "names the two that are off: " .. box.text.label)
-    eq(box.text.label:find("enemy nameplates", 1, true), nil, "not the one already on")
-    eq(nameplateValues(), "10000", "nothing changed before the click")
-    eq(popupButtons(), "No thanks, Turn on"); eq(box.Border.template, "DialogBorderTemplate", "the game's dialog border")
+    expectEqual(box.text.label:find("enemy nameplates", 1, true), nil, "not the one already on")
+    expectEqual(nameplateValues(), "10000", "nothing changed before the click")
+    expectEqual(popupButtons(), "No thanks, Turn on"); expectEqual(box.Border.template, "DialogBorderTemplate", "the game's dialog border")
     clickPopup("Turn on")
-    eq(nameplateValues(), "11111", "turned on")
-    eq(GamepadReticleOnTargetDB.nameplatesAsked, true)
+    expectEqual(nameplateValues(), "11111", "turned on")
+    expectEqual(GamepadReticleOnTargetDB.nameplatesAsked, true)
     boot(true, GamepadReticleOnTargetDB, false, { enemies = "1" })
     enterWorld()
-    eq(nameplatesBox(), nil, "the next launch doesn't ask again")
+    expectEqual(nameplatesBox(), nil, "the next launch doesn't ask again")
 end)
 
 test("on the controller: A turns the nameplates on, B says no; closing gives the buttons back", function()
     boot(true, nil)
     enterWorld()
-    eq(game.bindings.PAD1, "GamepadReticleOnTargetPopupButton1", "A: Turn on")
-    eq(game.bindings.PAD2, "GamepadReticleOnTargetPopupButton2", "B: No thanks")
+    expectEqual(game.bindings.PAD1, "GamepadReticleOnTargetPopupButton1", "A: Turn on")
+    expectEqual(game.bindings.PAD2, "GamepadReticleOnTargetPopupButton2", "B: No thanks")
     _G[game.bindings.PAD1]:Click()
-    eq(nameplateValues(), "11111", "turned on with A")
-    eq(game.bindings.PAD1, nil, "given back"); eq(game.bindings.PAD2, nil)
+    expectEqual(nameplateValues(), "11111", "turned on with A")
+    expectEqual(game.bindings.PAD1, nil, "given back"); expectEqual(game.bindings.PAD2, nil)
 end)
 
 test("No thanks changes nothing; the settings page's button asks again", function()
     boot(true, nil)
     enterWorld()
     clickPopup("No thanks")
-    eq(nameplateValues(), "00000", "nothing changed")
-    eq(GamepadReticleOnTargetDB.enabled, true, "the setting kept")
+    expectEqual(nameplateValues(), "00000", "nothing changed")
+    expectEqual(GamepadReticleOnTargetDB.enabled, true, "the setting kept")
     local button
     for _, initializer in ipairs(game.buttons) do if initializer.name == "Nameplates" then button = initializer end end
-    eq(button.buttonText, "Turn on nameplates")
-    eq(#button.shownPredicates, 0, "no shown predicate: it froze the controller's navigation")
+    expectEqual(button.buttonText, "Turn on nameplates")
+    expectEqual(#button.shownPredicates, 0, "no shown predicate: it froze the controller's navigation")
     button.onClick()
-    eq(nameplatesBox().shown, true, "asked again")
+    expectEqual(nameplatesBox().shown, true, "asked again")
 end)
 
 test("no box or row when the nameplates are on; no box when turned off", function()
     boot(true, nil, false, { enemies = "1", friends = "1", classColors = "1", npcs = "1", minions = "1" })
     enterWorld()
-    eq(nameplatesBox(), nil, "all on")
-    for _, initializer in ipairs(game.buttons) do eq(initializer.name ~= "Nameplates", true, "all on: no row") end
+    expectEqual(nameplatesBox(), nil, "all on")
+    for _, initializer in ipairs(game.buttons) do expectEqual(initializer.name ~= "Nameplates", true, "all on: no row") end
     boot(true, { enabled = false })
     enterWorld()
-    eq(nameplatesBox(), nil, "off: not needed")
+    expectEqual(nameplatesBox(), nil, "off: not needed")
 end)
 
 test("first launch in a fight: the box waits for its end", function()
     boot(true, nil)
     game.combat = true
     enterWorld()
-    eq(nameplatesBox(), nil, "not in combat")
+    expectEqual(nameplatesBox(), nil, "not in combat")
     game.combat = false
     game.fire("PLAYER_REGEN_ENABLED")
-    eq(nameplatesBox().shown, true, "after the fight")
+    expectEqual(nameplatesBox().shown, true, "after the fight")
 end)
 
 test("if the game won't take the nameplate settings, Reticle on your target goes off and says why", function()
     boot(true, nil, false, { refuse = true })
     enterWorld()
     clickPopup("Turn on")
-    eq(nameplateValues(), "00000")
-    eq(GamepadReticleOnTargetDB.enabled, false, "the setting that needs them, off")
-    eq(game.printed[#game.printed]:find("couldn't turn on", 1, true) ~= nil, true, game.printed[#game.printed])
+    expectEqual(nameplateValues(), "00000")
+    expectEqual(GamepadReticleOnTargetDB.enabled, false, "the setting that needs them, off")
+    expectEqual(game.printed[#game.printed]:find("couldn't turn on", 1, true) ~= nil, true, game.printed[#game.printed])
 end)
 
 test("without Gamepad Reticle Customizer: a button shows its link to copy; with it, no button", function()
     boot(true, nil)
     local button
     for _, initializer in ipairs(game.buttons) do if initializer.name == "Customize the reticle" then button = initializer end end
-    eq(button and button.buttonText, "Get the addon")
+    expectEqual(button and button.buttonText, "Get the addon")
     button.onClick()
     local box = popup()
-    eq(box.editBox:GetText(), "https://www.curseforge.com/projects/1818557", "its CurseForge page")
-    eq(box.editBox.highlighted, true, "selected, ready for Ctrl+C")
-    eq(popupButtons(), "Close, [secure] Reload", "a Reload for once it's installed")
+    expectEqual(box.editBox:GetText(), "https://www.curseforge.com/projects/1818557", "its CurseForge page")
+    expectEqual(box.editBox.highlighted, true, "selected, ready for Ctrl+C")
+    expectEqual(popupButtons(), "Close, [secure] Reload", "a Reload for once it's installed")
     boot(true, nil, false, { customizerInstalled = true })
-    for _, initializer in ipairs(game.buttons) do eq(initializer.name ~= "Customize the reticle", true, "installed: no button") end
+    for _, initializer in ipairs(game.buttons) do expectEqual(initializer.name ~= "Customize the reticle", true, "installed: no button") end
 end)
 
 -- /grt debug: the in-game suite, run here against the fake game.
 local function runUntilNoTimersLeft()
-    for _ = 1, 200 do if #game.timers == 0 then return end; frame() end
+    for _ = 1, 200 do if #game.timers == 0 then return end; runNextFrame() end
     error("the debug run never ended")
 end
 local function expectAllPassed(run)
@@ -478,9 +480,9 @@ test("/grt debug on a controller: every check passes, settings come back, a relo
     runUntilNoTimersLeft()
     local run = GamepadReticleOnTargetDebugDB.runs[1]
     expectAllPassed(run)
-    eq(run.passed > 5, true, "passed " .. run.passed)
-    eq(GamepadReticleOnTargetDB.offset, -5, "your settings back"); eq(GamepadReticleOnTargetDB.enabled, true)
-    eq(popupButtons(), "Later, [secure] Reload")
+    expectEqual(run.passed > 5, true, "passed " .. run.passed)
+    expectEqual(GamepadReticleOnTargetDB.offset, -5, "your settings back"); expectEqual(GamepadReticleOnTargetDB.enabled, true)
+    expectEqual(popupButtons(), "Later, [secure] Reload")
 end)
 
 test("/grt debug with a target: the reticle on its nameplate is checked without measuring it (a restricted region)", function()
@@ -495,7 +497,7 @@ test("/grt debug with a target: the reticle on its nameplate is checked without 
     for _, check in ipairs(run.checks) do
         if check.name:find("on the target's nameplate", 1, true) then onNameplate = onNameplate + 1 end
     end
-    eq(onNameplate > 0, true, "the nameplate checks ran")
+    expectEqual(onNameplate > 0, true, "the nameplate checks ran")
 end)
 
 test("/grt debug on keyboard: reticle checks skipped, nothing fails", function()
@@ -504,22 +506,22 @@ test("/grt debug on keyboard: reticle checks skipped, nothing fails", function()
     SlashCmdList.GAMEPADRETICLEONTARGET("debug")
     runUntilNoTimersLeft()
     local run = GamepadReticleOnTargetDebugDB.runs[1]
-    eq(run.failed, 0); eq(run.skipped > 0, true)
+    expectEqual(run.failed, 0); expectEqual(run.skipped > 0, true)
 end)
 
 test("/grt debug: a fight stops it and puts your settings back; a cut-short run is undone at login", function()
     boot(true, { enabled = true, offset = 10 }, false, allNameplatesOn)
     enterWorld()
     SlashCmdList.GAMEPADRETICLEONTARGET("debug")
-    frame(); frame()
+    runNextFrame(); runNextFrame()
     game.combat = true
     game.fire("PLAYER_REGEN_DISABLED")
-    eq(GamepadReticleOnTargetDebugDB.runs[1].stopped, "combat")
-    eq(GamepadReticleOnTargetDB.offset, 10)
+    expectEqual(GamepadReticleOnTargetDebugDB.runs[1].stopped, "combat")
+    expectEqual(GamepadReticleOnTargetDB.offset, 10)
     boot(true, { enabled = false, offset = 40 })
     GamepadReticleOnTargetDebugDB = { runs = {}, settingsToRestore = { enabled = true, offset = 3 } }
     game.fire("PLAYER_LOGIN")
-    eq(GamepadReticleOnTargetDB.enabled, true); eq(GamepadReticleOnTargetDB.offset, 3)
+    expectEqual(GamepadReticleOnTargetDB.enabled, true); expectEqual(GamepadReticleOnTargetDB.offset, 3)
 end)
 
 test("the release leaves Debug.lua out; listed under Gamepad", function()
@@ -531,25 +533,25 @@ test("the release leaves Debug.lua out; listed under Gamepad", function()
     for line in releaseToc:gmatch("[^\n]+") do
         if not line:find("^#") then loadedFiles[#loadedFiles + 1] = line end
     end
-    eq(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,NameplateNames.lua,NameplateHiding.lua,RelatedAddons.lua")
-    eq(toc:match("## Category: ([^\n]+)"), "Gamepad")
+    expectEqual(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,NameplateNames.lua,NameplateHiding.lua,RelatedAddons.lua")
+    expectEqual(toc:match("## Category: ([^\n]+)"), "Gamepad")
 end)
 
 test("without Debug.lua (the release), the addon works and /grt debug opens the settings", function()
     boot(true, {}, true)
-    eq(GamepadReticleOnTarget.Debug, nil)
+    expectEqual(GamepadReticleOnTarget.Debug, nil)
     enterWorld()
-    eq(GamepadReticle.point.relativeTo, UIParent, "placed")
+    expectEqual(GamepadReticle.point.relativeTo, UIParent, "placed")
     SlashCmdList.GAMEPADRETICLEONTARGET("debug")
-    eq(game.opened, 42)
+    expectEqual(game.opened, 42)
 end)
 
 test("its icon in the AddOns list: Media/icon-64.png, shipped", function()
     local function readFile(path) local file = assert(io.open(path, "rb")); local text = file:read("*a"); file:close(); return text end
     local toc = readFile("GamepadReticleOnTarget.toc"):gsub("\r", "")
-    eq(toc:match("## IconTexture: ([^\n]+)"), "Interface\\AddOns\\GamepadReticleOnTarget\\Media\\icon-64.png")
-    eq(readFile("Media/icon-64.png"):sub(2, 4), "PNG", "a PNG file")
-    eq(readFile(".pkgmeta"):find("- Media/icon-64.png", 1, true), nil, "not left out of the release")
+    expectEqual(toc:match("## IconTexture: ([^\n]+)"), "Interface\\AddOns\\GamepadReticleOnTarget\\Media\\icon-64.png")
+    expectEqual(readFile("Media/icon-64.png"):sub(2, 4), "PNG", "a PNG file")
+    expectEqual(readFile(".pkgmeta"):find("- Media/icon-64.png", 1, true), nil, "not left out of the release")
 end)
 
 test("debug build: Gamepad Reticle Customizer turned off counts as missing, to see its button; the release doesn't", function()
@@ -557,22 +559,22 @@ test("debug build: Gamepad Reticle Customizer turned off counts as missing, to s
         for _, initializer in ipairs(game.buttons) do if initializer.name == "Customize the reticle" then return initializer end end
     end
     boot(true, nil, false, { customizerOff = true })
-    eq(button() ~= nil, true, "turned off: the button, as players without it see it")
+    expectEqual(button() ~= nil, true, "turned off: the button, as players without it see it")
     boot(true, nil, true, { customizerOff = true })
-    eq(button(), nil, "the release: installed is installed")
+    expectEqual(button(), nil, "the release: installed is installed")
     boot(true, nil, false, { customizerInstalled = true })
-    eq(button(), nil, "debug build, turned on: no button")
+    expectEqual(button(), nil, "debug build, turned on: no button")
 end)
 
 test("a Get button for each missing sibling, in order, each with its own CurseForge link", function()
     boot(true, nil, false, { enemies = "1", friends = "1", classColors = "1", npcs = "1", minions = "1" })
     local names = {}
     for _, initializer in ipairs(game.buttons) do if initializer.buttonText then names[#names + 1] = initializer.name .. ": " .. initializer.buttonText end end
-    eq(table.concat(names, ", "), "Camera over shoulder: Get the addon, Customize the reticle: Get the addon")
+    expectEqual(table.concat(names, ", "), "Camera over shoulder: Get the addon, Customize the reticle: Get the addon")
     for _, initializer in ipairs(game.buttons) do
         if initializer.name == "Camera over shoulder" then initializer.onClick() end
     end
-    eq(_G.GamepadReticleOnTargetPopup.editBox:GetText(), "https://www.curseforge.com/projects/1818297")
+    expectEqual(_G.GamepadReticleOnTargetPopup.editBox:GetText(), "https://www.curseforge.com/projects/1818297")
 end)
 
 -- Hiding health bars and names on friendly NPCs' and minions' nameplates
@@ -621,9 +623,9 @@ test("all six off by default: every nameplate as the game draws it", function()
     boot(true, nil, false, allNameplatesOn)
     enterWorld()
     for _, key in ipairs({ "hideNpcHealthBars", "hideNpcNames", "hideNeutralHealthBars", "hideNeutralNames", "hideMinionHealthBars", "hideMinionNames" }) do
-        eq(GamepadReticleOnTargetDB[key], false, key)
+        expectEqual(GamepadReticleOnTargetDB[key], false, key)
     end
-    eq(looks(addPlate("nameplate1", FRIENDLY_NPC)), "1 1"); eq(looks(addPlate("nameplate2", FRIENDLY_MINION)), "1 1")
+    expectEqual(looks(addPlate("nameplate1", FRIENDLY_NPC)), "1 1"); expectEqual(looks(addPlate("nameplate2", FRIENDLY_MINION)), "1 1")
 end)
 
 test("each of the four on its own: only its part, only on its kind of unit", function()
@@ -631,26 +633,26 @@ test("each of the four on its own: only its part, only on its kind of unit", fun
     enterWorld()
     local npc, pet = addPlate("nameplate1", FRIENDLY_NPC), addPlate("nameplate2", FRIENDLY_MINION)
     set("hideNpcHealthBars", true)
-    eq(looks(npc), "0 1", "NPC: bar hidden, name kept"); eq(looks(pet), "1 1", "minion untouched")
+    expectEqual(looks(npc), "0 1", "NPC: bar hidden, name kept"); expectEqual(looks(pet), "1 1", "minion untouched")
     set("hideNpcHealthBars", false); set("hideNpcNames", true)
-    eq(looks(npc), "1 0", "NPC: name hidden, bar kept")
+    expectEqual(looks(npc), "1 0", "NPC: name hidden, bar kept")
     set("hideNpcNames", false); set("hideMinionHealthBars", true)
-    eq(looks(pet), "0 1", "minion: bar hidden"); eq(looks(npc), "1 1", "NPC untouched")
+    expectEqual(looks(pet), "0 1", "minion: bar hidden"); expectEqual(looks(npc), "1 1", "NPC untouched")
     set("hideMinionHealthBars", false); set("hideMinionNames", true)
-    eq(looks(pet), "1 0", "minion: name hidden")
+    expectEqual(looks(pet), "1 0", "minion: name hidden")
     set("hideMinionNames", false)
-    eq(looks(pet), "1 1"); eq(looks(npc), "1 1")
+    expectEqual(looks(pet), "1 1"); expectEqual(looks(npc), "1 1")
 end)
 
 test("all four on: friendly NPCs and minions fully hidden; players, enemies and neutral ones untouched", function()
     boot(true, hideAll(), false, allNameplatesOn)
     enterWorld()
     local npc, pet = addPlate("nameplate1", FRIENDLY_NPC), addPlate("nameplate2", FRIENDLY_MINION)
-    eq(looks(npc), "0 0"); eq(looks(pet), "0 0")
-    eq(npc.alpha, 1, "the nameplate itself untouched")
-    eq(looks(addPlate("nameplate3", FRIENDLY_PLAYER)), "1 1", "a friendly player")
-    eq(looks(addPlate("nameplate4", ENEMY_NPC)), "1 1", "an enemy")
-    eq(looks(addPlate("nameplate5", NEUTRAL_NPC)), "0 0", "a neutral NPC: its own boxes, also on here")
+    expectEqual(looks(npc), "0 0"); expectEqual(looks(pet), "0 0")
+    expectEqual(npc.alpha, 1, "the nameplate itself untouched")
+    expectEqual(looks(addPlate("nameplate3", FRIENDLY_PLAYER)), "1 1", "a friendly player")
+    expectEqual(looks(addPlate("nameplate4", ENEMY_NPC)), "1 1", "an enemy")
+    expectEqual(looks(addPlate("nameplate5", NEUTRAL_NPC)), "0 0", "a neutral NPC: its own boxes, also on here")
 end)
 
 test("turned off, a part gets its own alpha back", function()
@@ -658,7 +660,7 @@ test("turned off, a part gets its own alpha back", function()
     enterWorld()
     local npc = addPlate("nameplate1", FRIENDLY_NPC, 0.8)
     set("hideNpcHealthBars", false)
-    eq(npc.HealthBarsContainer.alpha, 0.8, "its own alpha back"); eq(npc.name.alpha, 0, "the name still hidden")
+    expectEqual(npc.HealthBarsContainer.alpha, 0.8, "its own alpha back"); expectEqual(npc.name.alpha, 0, "the name still hidden")
 end)
 
 test("a nameplate going back to the game's pool gets its alphas back; a unit changing sides is checked again", function()
@@ -666,12 +668,12 @@ test("a nameplate going back to the game's pool gets its alphas back; a unit cha
     enterWorld()
     local npc = addPlate("nameplate1", FRIENDLY_NPC)
     game.fire("NAME_PLATE_UNIT_REMOVED", "nameplate1")
-    eq(looks(npc), "1 1", "given back before the game reuses it")
+    expectEqual(looks(npc), "1 1", "given back before the game reuses it")
     local turning = addPlate("nameplate2", FRIENDLY_NPC)
-    eq(looks(turning), "0 0")
+    expectEqual(looks(turning), "0 0")
     game.unitKinds.nameplate2 = ENEMY_NPC
     game.fire("UNIT_FACTION", "nameplate2")
-    eq(looks(turning), "1 1", "now an enemy: shown")
+    expectEqual(looks(turning), "1 1", "now an enemy: shown")
 end)
 
 test("the reticle still goes on a friendly NPC whose nameplate is fully hidden", function()
@@ -679,8 +681,8 @@ test("the reticle still goes on a friendly NPC whose nameplate is fully hidden",
     enterWorld()
     addPlate("nameplate1", FRIENDLY_NPC)
     game.units.target = true; game.nameplates.target = game.nameplates.nameplate1
-    game.fire("PLAYER_TARGET_CHANGED"); frame()
-    eq(GamepadReticle.point.relativeTo, game.nameplates.nameplate1, "under its nameplate")
+    game.fire("PLAYER_TARGET_CHANGED"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, game.nameplates.nameplate1, "under its nameplate")
 end)
 
 test("a nameplate the game locks for addons is left alone", function()
@@ -690,7 +692,7 @@ test("a nameplate the game locks for addons is left alone", function()
     npc.HealthBarsContainer.alpha, npc.name.alpha = 1, 1
     function npc:IsForbidden() return true end
     game.fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
-    eq(looks(npc), "1 1", "not touched")
+    expectEqual(looks(npc), "1 1", "not touched")
 end)
 
 test("laid out as the game's Nameplates options: a heading per group, its boxes indented below", function()
@@ -700,10 +702,10 @@ test("laid out as the game's Nameplates options: a heading per group, its boxes 
         if row.heading then rows[#rows + 1] = "# " .. row.heading
         elseif row.checkbox then rows[#rows + 1] = (row.indented and "  " or "") .. row.checkbox end
     end
-    eq(table.concat(rows, ", "), "enabled, # Friendly NPC Nameplates,   hideNpcHealthBars,   hideNpcNames,   hideNpcLevels, "
+    expectEqual(table.concat(rows, ", "), "enabled, # Friendly NPC Nameplates,   hideNpcHealthBars,   hideNpcNames,   hideNpcLevels, "
         .. "  npcWorldNames, # Neutral NPC Nameplates,   hideNeutralHealthBars,   hideNeutralNames,   hideNeutralLevels, "
         .. "  neutralWorldNames, # Friendly Player Minions,   hideMinionHealthBars,   hideMinionNames,   hideMinionLevels")
-    eq(game.settings.GamepadReticleOnTarget_hideMinionNames ~= nil, true)
+    expectEqual(game.settings.GamepadReticleOnTarget_hideMinionNames ~= nil, true)
 end)
 
 test("neutral NPCs: their own two boxes; enemies and others' minions never touched", function()
@@ -713,31 +715,31 @@ test("neutral NPCs: their own two boxes; enemies and others' minions never touch
     local enemy = addPlate("nameplate3", ENEMY_NPC)
     local enemyMinion = addPlate("nameplate4", { reaction = 4, controlled = true })
     set("hideNeutralHealthBars", true)
-    eq(looks(neutral), "0 1", "neutral: bar hidden"); eq(looks(npc), "1 1", "friendly NPC untouched")
+    expectEqual(looks(neutral), "0 1", "neutral: bar hidden"); expectEqual(looks(npc), "1 1", "friendly NPC untouched")
     set("hideNeutralNames", true)
-    eq(looks(neutral), "0 0")
-    eq(looks(enemy), "1 1", "an enemy, never"); eq(looks(enemyMinion), "1 1", "a neutral player's minion, never")
+    expectEqual(looks(neutral), "0 0")
+    expectEqual(looks(enemy), "1 1", "an enemy, never"); expectEqual(looks(enemyMinion), "1 1", "a neutral player's minion, never")
 end)
 
 test("saved keys the addon doesn't use are dropped; its own record of the nameplate question kept", function()
     boot(true, { enabled = true, offset = 5, hidePets = true, somethingElse = 1, nameplatesAsked = true })
-    eq(GamepadReticleOnTargetDB.hidePets, nil); eq(GamepadReticleOnTargetDB.somethingElse, nil)
-    eq(GamepadReticleOnTargetDB.offset, 5); eq(GamepadReticleOnTargetDB.nameplatesAsked, true)
+    expectEqual(GamepadReticleOnTargetDB.hidePets, nil); expectEqual(GamepadReticleOnTargetDB.somethingElse, nil)
+    expectEqual(GamepadReticleOnTargetDB.offset, 5); expectEqual(GamepadReticleOnTargetDB.nameplatesAsked, true)
 end)
 
 test("turned off: the nameplate settings it turned on go back as they were; one you changed since, or that was already on, stays", function()
     boot(true, nil, false, { enemies = "1" })
     enterWorld()
     clickPopup("Turn on")
-    eq(nameplateValues(), "11111", "turned on")
-    eq(GamepadReticleOnTargetDB.nameplatesBefore.nameplateShowEnemies, nil, "already on: nothing to put back")
+    expectEqual(nameplateValues(), "11111", "turned on")
+    expectEqual(GamepadReticleOnTargetDB.nameplatesBefore.nameplateShowEnemies, nil, "already on: nothing to put back")
     C_CVar.SetCVar("nameplateShowFriendlyNpcs", "0")   -- you changed one yourself since
     set("enabled", false)
-    eq(nameplateValues(), "10000", "back as before; the one you changed left as you set it")
-    eq(GamepadReticleOnTargetDB.nameplatesBefore, nil, "nothing left to put back")
-    eq(game.printed[#game.printed]:find("back as they were", 1, true) ~= nil, true, game.printed[#game.printed])
+    expectEqual(nameplateValues(), "10000", "back as before; the one you changed left as you set it")
+    expectEqual(GamepadReticleOnTargetDB.nameplatesBefore, nil, "nothing left to put back")
+    expectEqual(game.printed[#game.printed]:find("back as they were", 1, true) ~= nil, true, game.printed[#game.printed])
     set("enabled", true)
-    eq(nameplatesBox() ~= nil, true, "turned on again: asked again")
+    expectEqual(nameplatesBox() ~= nil, true, "turned on again: asked again")
 end)
 
 test("turned off in a fight: put back once it's over, if still off", function()
@@ -746,10 +748,10 @@ test("turned off in a fight: put back once it's over, if still off", function()
     clickPopup("Turn on")
     game.combat = true
     set("enabled", false)
-    eq(nameplateValues(), "11111", "not in combat")
+    expectEqual(nameplateValues(), "11111", "not in combat")
     game.combat = false
     game.fire("PLAYER_REGEN_ENABLED")
-    eq(nameplateValues(), "10000", "after the fight")
+    expectEqual(nameplateValues(), "10000", "after the fight")
 end)
 
 test("what it turned on is remembered across reloads", function()
@@ -758,30 +760,30 @@ test("what it turned on is remembered across reloads", function()
     clickPopup("Turn on")
     boot(true, GamepadReticleOnTargetDB, false, { enemies = "1", friends = "1", classColors = "1", npcs = "1", minions = "1" })
     set("enabled", false)
-    eq(nameplateValues(), "10000", "put back after a reload")
+    expectEqual(nameplateValues(), "10000", "put back after a reload")
 end)
 
 test("turned off: hidden health bars and names show again", function()
     boot(true, hideAll(), false, allNameplatesOn)
     enterWorld()
     local npc = addPlate("nameplate1", FRIENDLY_NPC)
-    eq(looks(npc), "0 0")
+    expectEqual(looks(npc), "0 0")
     set("enabled", false)
-    eq(looks(npc), "1 1", "the game's nameplate as it is")
+    expectEqual(looks(npc), "1 1", "the game's nameplate as it is")
     set("enabled", true)
-    eq(looks(npc), "0 0", "hidden again")
+    expectEqual(looks(npc), "0 0", "hidden again")
 end)
 
 test("World-style names: friendly and neutral NPCs' names in the game's color, title under it; the level badge stays", function()
     boot(true, { npcWorldNames = true, neutralWorldNames = true, hideNpcHealthBars = true }, false, allNameplatesOn)
     enterWorld()
     local master = addPlate("nameplate1", { reaction = 5, title = "Stable Master" })
-    eq(table.concat(master.name.color, " "), "0 1 0", "green, as the game's world names")
-    eq(master.title.text, "<Stable Master>"); eq(table.concat(master.title.color, " "), "0 1 0"); eq(master.title.shown, true)
-    eq(master.PlayerLevelDiffFrame.alpha, 1, "the level badge stays")
+    expectEqual(table.concat(master.name.color, " "), "0 1 0", "green, as the game's world names")
+    expectEqual(master.title.text, "<Stable Master>"); expectEqual(table.concat(master.title.color, " "), "0 1 0"); expectEqual(master.title.shown, true)
+    expectEqual(master.PlayerLevelDiffFrame.alpha, 1, "the level badge stays")
     local emissary = addPlate("nameplate2", { reaction = 4 })
-    eq(table.concat(emissary.name.color, " "), "1 1 0", "neutral: yellow")
-    eq(emissary.title, nil, "no title (its tooltip's second line is its level): none added")
+    expectEqual(table.concat(emissary.name.color, " "), "1 1 0", "neutral: yellow")
+    expectEqual(emissary.title, nil, "no title (its tooltip's second line is its level): none added")
 end)
 
 test("World-style names off: the name's own color back, the title hidden; Hide names hides the title too", function()
@@ -789,11 +791,11 @@ test("World-style names off: the name's own color back, the title hidden; Hide n
     enterWorld()
     local master = addPlate("nameplate1", { reaction = 5, title = "Stable Master" })
     set("hideNpcNames", true)
-    eq(master.name.alpha, 0); eq(master.title.alpha, 0, "the title with the name")
+    expectEqual(master.name.alpha, 0); expectEqual(master.title.alpha, 0, "the title with the name")
     set("hideNpcNames", false)
-    eq(master.title.alpha, 1)
+    expectEqual(master.title.alpha, 1)
     set("npcWorldNames", false)
-    eq(table.concat(master.name.color, " "), "1 1 1", "the game's white back"); eq(master.title.shown, false)
+    expectEqual(table.concat(master.name.color, " "), "1 1 1", "the game's white back"); expectEqual(master.title.shown, false)
 end)
 
 test("the game's own name update is followed by our color", function()
@@ -802,48 +804,48 @@ test("the game's own name update is followed by our color", function()
     local master = addPlate("nameplate1", { reaction = 5 })
     master.name:SetVertexColor(1, 1, 1)
     CompactUnitFrame_UpdateName(master)
-    eq(table.concat(master.name.color, " "), "0 1 0")
+    expectEqual(table.concat(master.name.color, " "), "0 1 0")
 end)
 
 test("off by default, and minions keep the game's name look", function()
     boot(true, nil, false, allNameplatesOn)
     enterWorld()
-    eq(GamepadReticleOnTargetDB.npcWorldNames, false); eq(GamepadReticleOnTargetDB.neutralWorldNames, false)
+    expectEqual(GamepadReticleOnTargetDB.npcWorldNames, false); expectEqual(GamepadReticleOnTargetDB.neutralWorldNames, false)
     local npc = addPlate("nameplate1", { reaction = 5, title = "Stable Master" })
-    eq(table.concat(npc.name.color, " "), "1 1 1", "the game's own look"); eq(npc.title, nil)
+    expectEqual(table.concat(npc.name.color, " "), "1 1 1", "the game's own look"); expectEqual(npc.title, nil)
     set("hideNpcHealthBars", true)
-    eq(table.concat(npc.name.color, " "), "1 1 1", "hiding the bar alone keeps the game's name")
+    expectEqual(table.concat(npc.name.color, " "), "1 1 1", "hiding the bar alone keeps the game's name")
     boot(true, { npcWorldNames = true, neutralWorldNames = true }, false, allNameplatesOn)
     enterWorld()
     local minion = addPlate("nameplate2", FRIENDLY_MINION)
-    eq(table.concat(minion.name.color, " "), "1 1 1"); eq(minion.title, nil)
+    expectEqual(table.concat(minion.name.color, " "), "1 1 1"); expectEqual(minion.title, nil)
 end)
 
 test("Hide level: the level beside the name, per group, off by default", function()
     boot(true, nil, false, allNameplatesOn)
     enterWorld()
-    eq(GamepadReticleOnTargetDB.hideNpcLevels, false); eq(GamepadReticleOnTargetDB.hideMinionLevels, false)
+    expectEqual(GamepadReticleOnTargetDB.hideNpcLevels, false); expectEqual(GamepadReticleOnTargetDB.hideMinionLevels, false)
     local npc, minion = addPlate("nameplate1", FRIENDLY_NPC), addPlate("nameplate2", FRIENDLY_MINION)
     set("hideNpcLevels", true)
-    eq(npc.PlayerLevelDiffFrame.alpha, 0); eq(npc.HealthBarsContainer.alpha, 1, "the bar kept"); eq(npc.name.alpha, 1)
-    eq(minion.PlayerLevelDiffFrame.alpha, 1, "minions: their own box")
+    expectEqual(npc.PlayerLevelDiffFrame.alpha, 0); expectEqual(npc.HealthBarsContainer.alpha, 1, "the bar kept"); expectEqual(npc.name.alpha, 1)
+    expectEqual(minion.PlayerLevelDiffFrame.alpha, 1, "minions: their own box")
     set("hideMinionLevels", true)
-    eq(minion.PlayerLevelDiffFrame.alpha, 0)
+    expectEqual(minion.PlayerLevelDiffFrame.alpha, 0)
 end)
 
 test("Name size: world-style names at a percentage of the game's nameplate name size; Default and off give the game's back", function()
     boot(true, { npcWorldNames = true }, false, allNameplatesOn)
     enterWorld()
-    eq(game.options.npcNameSize.format(100), "Default"); eq(game.options.npcNameSize.format(150), "150%")
+    expectEqual(game.options.npcNameSize.format(100), "Default"); expectEqual(game.options.npcNameSize.format(150), "150%")
     local npc = addPlate("nameplate1", FRIENDLY_NPC)
-    eq(npc.name.height, nil, "Default: the game's height untouched")
+    expectEqual(npc.name.height, nil, "Default: the game's height untouched")
     set("npcNameSize", 150)
-    eq(npc.name.height, 24, "150% of the game's 16")
+    expectEqual(npc.name.height, 24, "150% of the game's 16")
     set("npcNameSize", 100)
-    eq(npc.name.height, 16, "back to the game's")
+    expectEqual(npc.name.height, 16, "back to the game's")
     set("npcNameSize", 125)
     set("npcWorldNames", false)
-    eq(npc.name.height, 16, "World-style names off: the game's size back")
+    expectEqual(npc.name.height, 16, "World-style names off: the game's size back")
 end)
 
 test("on a nameplate with the game's interaction icon frame: centered on it, the offset from there", function()
@@ -852,9 +854,9 @@ test("on a nameplate with the game's interaction icon frame: centered on it, the
     local iconSpot = { name = "SoftTargetFrame" }
     local plate = { UnitFrame = { SoftTargetFrame = iconSpot } }
     game.units.target = true; game.nameplates.target = plate
-    game.fire("PLAYER_TARGET_CHANGED"); frame()
-    eq(GamepadReticle.point.relativeTo, iconSpot, "where the game shows its icon")
-    eq(GamepadReticle.point[2], "CENTER"); eq(GamepadReticle.point[4], 0, "right on it by default")
+    game.fire("PLAYER_TARGET_CHANGED"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, iconSpot, "where the game shows its icon")
+    expectEqual(GamepadReticle.point[2], "CENTER"); expectEqual(GamepadReticle.point[4], 0, "right on it by default")
     set("offset", -30)
     near(GamepadReticle.point[4], -10, "30 px down from there")
 end)
@@ -868,12 +870,12 @@ test("a quest giver (the game draws its \"!\" above the head): the reticle below
     _G.SetUnitCursorTexture = function(texture) function texture:GetTexture() return cursorTexture end; return true end
     game.units.target = true; game.nameplates.target = plate
     cursorTexture = "Cursor Crosshair_Quest_64"
-    game.fire("PLAYER_TARGET_CHANGED"); frame()
-    eq(GamepadReticle.point.relativeTo, healthBar, "below the nameplate, clear of the \"!\"")
-    eq(GamepadReticle.point[2], "BOTTOM")
+    game.fire("PLAYER_TARGET_CHANGED"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, healthBar, "below the nameplate, clear of the \"!\"")
+    expectEqual(GamepadReticle.point[2], "BOTTOM")
     cursorTexture = "Cursor Crosshair_Trainer_64"
-    game.fire("PLAYER_TARGET_CHANGED"); frame()
-    eq(GamepadReticle.point.relativeTo, iconSpot, "a trainer: on the icon spot")
+    game.fire("PLAYER_TARGET_CHANGED"); runNextFrame()
+    expectEqual(GamepadReticle.point.relativeTo, iconSpot, "a trainer: on the icon spot")
     _G.SetUnitCursorTexture = nil
 end)
 
