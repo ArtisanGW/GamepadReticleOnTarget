@@ -217,7 +217,7 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     game.printed = printed
     _G.print = function(text) printed[#printed + 1] = text end
     local namespace = {}
-    for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "NameplateNames.lua", "NameplateHiding.lua", "RelatedAddons.lua", "SoftTargetTooltip.lua" }) do
+    for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "NameplateNames.lua", "NameplateHiding.lua", "RelatedAddons.lua", "ReticleTooltip.lua" }) do
         assert(loadfile(file))("GamepadReticleOnTarget", namespace)
     end
     if not releaseBuild then
@@ -243,12 +243,12 @@ local function onUpdateFramesShown()
 end
 local function enterWorld() game.fire("PLAYER_ENTERING_WORLD"); runNextFrame() end
 
-test("registers its page under Options > AddOns, with the defaults; /grt and /gamepadreticleontarget open it", function()
+test("registers its page under Options > AddOns, with the defaults; /gprt and /gamepadreticleontarget open it", function()
     boot(true, nil)
     expectEqual(game.category.name, "Gamepad Reticle On Target")
     expectEqual(GamepadReticleOnTargetDB.enabled, true); expectEqual(GamepadReticleOnTargetDB.offset, 0)
     expectEqual(game.options.offset.format(10), "10 px up"); expectEqual(game.options.offset.format(-5), "5 px down"); expectEqual(game.options.offset.format(0), "Default")
-    expectEqual(SLASH_GAMEPADRETICLEONTARGET1, "/grt"); expectEqual(SLASH_GAMEPADRETICLEONTARGET2, "/gamepadreticleontarget")
+    expectEqual(SLASH_GAMEPADRETICLEONTARGET1, "/gprt"); expectEqual(SLASH_GAMEPADRETICLEONTARGET2, "/gamepadreticleontarget")
     SlashCmdList.GAMEPADRETICLEONTARGET("")
     expectEqual(game.opened, 42)
 end)
@@ -461,7 +461,7 @@ test("without Gamepad Reticle Customizer: a button shows its link to copy; with 
     for _, initializer in ipairs(game.buttons) do expectEqual(initializer.name ~= "Customize the reticle", true, "installed: no button") end
 end)
 
--- /grt debug: the in-game suite, run here against the fake game.
+-- /gprt debug: the in-game suite, run here against the fake game.
 local function runUntilNoTimersLeft()
     for _ = 1, 200 do if #game.timers == 0 then return end; runNextFrame() end
     error("the debug run never ended")
@@ -476,7 +476,7 @@ local function expectAllPassed(run)
 end
 local allNameplatesOn = { enemies = "1", friends = "1", classColors = "1", npcs = "1", minions = "1" }
 
-test("/grt debug on a controller: every check passes, settings come back, a reload box", function()
+test("/gprt debug on a controller: every check passes, settings come back, a reload box", function()
     boot(true, { enabled = true, offset = -5 }, false, allNameplatesOn)
     game.fire("PLAYER_LOGIN"); enterWorld()
     SlashCmdList.GAMEPADRETICLEONTARGET("debug")
@@ -488,7 +488,7 @@ test("/grt debug on a controller: every check passes, settings come back, a relo
     expectEqual(popupButtons(), "Later, [secure] Reload")
 end)
 
-test("/grt debug with a target: the reticle on its nameplate is checked without measuring it (a restricted region)", function()
+test("/gprt debug with a target: the reticle on its nameplate is checked without measuring it (a restricted region)", function()
     boot(true, { enabled = true, offset = -5 }, false, allNameplatesOn)
     game.units.target = true; game.nameplates.target = { restricted = true }
     game.fire("PLAYER_LOGIN"); enterWorld()
@@ -503,7 +503,7 @@ test("/grt debug with a target: the reticle on its nameplate is checked without 
     expectEqual(onNameplate > 0, true, "the nameplate checks ran")
 end)
 
-test("/grt debug on keyboard: reticle checks skipped, nothing fails", function()
+test("/gprt debug on keyboard: reticle checks skipped, nothing fails", function()
     boot(false, nil, false, allNameplatesOn)
     enterWorld()
     SlashCmdList.GAMEPADRETICLEONTARGET("debug")
@@ -512,7 +512,7 @@ test("/grt debug on keyboard: reticle checks skipped, nothing fails", function()
     expectEqual(run.failed, 0); expectEqual(run.skipped > 0, true)
 end)
 
-test("/grt debug: a fight stops it and puts your settings back; a cut-short run is undone at login", function()
+test("/gprt debug: a fight stops it and puts your settings back; a cut-short run is undone at login", function()
     boot(true, { enabled = true, offset = 10 }, false, allNameplatesOn)
     enterWorld()
     SlashCmdList.GAMEPADRETICLEONTARGET("debug")
@@ -536,11 +536,11 @@ test("the release leaves Debug.lua out; listed under Gamepad", function()
     for line in releaseToc:gmatch("[^\n]+") do
         if not line:find("^#") then loadedFiles[#loadedFiles + 1] = line end
     end
-    expectEqual(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,NameplateNames.lua,NameplateHiding.lua,RelatedAddons.lua,SoftTargetTooltip.lua")
+    expectEqual(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,NameplateNames.lua,NameplateHiding.lua,RelatedAddons.lua,ReticleTooltip.lua")
     expectEqual(toc:match("## Category: ([^\n]+)"), "Gamepad")
 end)
 
-test("without Debug.lua (the release), the addon works and /grt debug opens the settings", function()
+test("without Debug.lua (the release), the addon works and /gprt debug opens the settings", function()
     boot(true, {}, true)
     expectEqual(GamepadReticleOnTarget.Debug, nil)
     enterWorld()
@@ -705,7 +705,7 @@ test("laid out as the game's Nameplates options: a heading per group, its boxes 
         if row.heading then rows[#rows + 1] = "# " .. row.heading
         elseif row.checkbox then rows[#rows + 1] = (row.indented and "  " or "") .. row.checkbox end
     end
-    expectEqual(table.concat(rows, ", "), "enabled, softTargetTooltip, # Friendly NPC Nameplates,   hideNpcHealthBars,   hideNpcNames,   hideNpcLevels, "
+    expectEqual(table.concat(rows, ", "), "enabled, reticleTooltip, # Friendly NPC Nameplates,   hideNpcHealthBars,   hideNpcNames,   hideNpcLevels, "
         .. "  npcWorldNames, # Neutral NPC Nameplates,   hideNeutralHealthBars,   hideNeutralNames,   hideNeutralLevels, "
         .. "  neutralWorldNames, # Friendly Player Minions,   hideMinionHealthBars,   hideMinionNames,   hideMinionLevels")
     expectEqual(game.settings.GamepadReticleOnTarget_hideMinionNames ~= nil, true)
@@ -888,25 +888,32 @@ local function fakeTooltip()
     function tooltip:IsShown() return self.shown end
     function tooltip:GetOwner() return self.owner end
     function tooltip:SetUnit(unit) self.unit, self.shown = unit, true end
-    function tooltip:Hide() self.shown, self.unit, self.owner = false, nil, nil end
+    tooltip.hideHooks = {}
+    function tooltip:Hide()
+        local wasShown = self.shown
+        self.shown, self.unit, self.owner = false, nil, nil
+        if wasShown then for _, hook in ipairs(self.hideHooks) do hook(self) end end
+    end
+    function tooltip:HookScript(scriptType, hook) if scriptType == "OnHide" then table.insert(self.hideHooks, hook) end end
     function tooltip:IsForbidden() return false end
     _G.GameTooltip = tooltip
     _G.UIParent = _G.UIParent or {}
     _G.GameTooltip_SetDefaultAnchor = function(anchoredTooltip, parent) anchoredTooltip.owner = parent end
+    game.fire("PLAYER_ENTERING_WORLD"); runNextFrame()
     return tooltip
 end
 
-test("soft-target tooltip: off by default, nothing shown", function()
+test("reticle tooltip: off by default, nothing shown", function()
     boot(true, nil)
     local tooltip = fakeTooltip()
     game.units.softenemy = true
     game.fire("PLAYER_SOFT_ENEMY_CHANGED")
-    expectEqual(GamepadReticleOnTargetDB.softTargetTooltip, false, "default")
+    expectEqual(GamepadReticleOnTargetDB.reticleTooltip, false, "default")
     expectEqual(tooltip.shown, false, "tooltip shown")
 end)
 
-test("soft-target tooltip: the enemy first, then the friend, hidden when none", function()
-    boot(true, { softTargetTooltip = true })
+test("reticle tooltip: the enemy first, then the friend, hidden when none", function()
+    boot(true, { reticleTooltip = true })
     local tooltip = fakeTooltip()
     game.units.softfriend = true
     game.fire("PLAYER_SOFT_FRIEND_CHANGED")
@@ -920,8 +927,30 @@ test("soft-target tooltip: the enemy first, then the friend, hidden when none", 
     expectEqual(tooltip.shown, false, "hidden")
 end)
 
-test("soft-target tooltip: a tooltip open for something else stays", function()
-    boot(true, { softTargetTooltip = true })
+test("reticle tooltip: your target first, as the reticle", function()
+    boot(true, { reticleTooltip = true })
+    local tooltip = fakeTooltip()
+    game.units.softenemy, game.units.target = true, true
+    game.fire("PLAYER_TARGET_CHANGED")
+    expectEqual(tooltip.unit, "target", "target")
+end)
+
+test("reticle tooltip: hidden by the game, it comes back the frame after; hidden by us, it doesn't", function()
+    boot(true, { reticleTooltip = true })
+    local tooltip = fakeTooltip()
+    game.units.target = true
+    game.fire("PLAYER_TARGET_CHANGED")
+    tooltip:Hide()   -- the game's own tooltip code
+    runNextFrame()
+    expectEqual(tooltip.unit, "target", "back")
+    game.units.target = nil
+    game.fire("PLAYER_TARGET_CHANGED")
+    runNextFrame()
+    expectEqual(tooltip.shown, false, "stays hidden with no unit")
+end)
+
+test("reticle tooltip: a tooltip open for something else stays", function()
+    boot(true, { reticleTooltip = true })
     local tooltip = fakeTooltip()
     local button = {}
     tooltip.shown, tooltip.owner = true, button
@@ -933,18 +962,18 @@ test("soft-target tooltip: a tooltip open for something else stays", function()
     expectEqual(tooltip.shown, true, "not hidden by us")
 end)
 
-test("soft-target tooltip: mouse UI or turned off, nothing shown; turning off hides ours", function()
-    boot(false, { softTargetTooltip = true })
+test("reticle tooltip: mouse UI or turned off, nothing shown; turning off hides ours", function()
+    boot(false, { reticleTooltip = true })
     local tooltip = fakeTooltip()
     game.units.softenemy = true
     game.fire("PLAYER_SOFT_ENEMY_CHANGED")
     expectEqual(tooltip.shown, false, "mouse UI")
-    boot(true, { softTargetTooltip = true })
+    boot(true, { reticleTooltip = true })
     tooltip = fakeTooltip()
     game.units.softenemy = true
     game.fire("PLAYER_SOFT_ENEMY_CHANGED")
     expectEqual(tooltip.unit, "softenemy", "shown")
-    set("softTargetTooltip", false)
+    set("reticleTooltip", false)
     expectEqual(tooltip.shown, false, "hidden when turned off")
 end)
 

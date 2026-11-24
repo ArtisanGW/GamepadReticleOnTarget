@@ -1,4 +1,4 @@
--- /grt debug tooltip: a 30-second check, debug builds only. The controller UI
+-- /gprt debug tooltip: a 30-second check, debug builds only. The controller UI
 -- holds the game's soft-target tooltip settings at 0 as temporary settings
 -- (Blizzard_Gamepad/Core.lua:24-25). This turns them on from addon code, then
 -- logs, at each soft-target change, whether the game's tooltip shows that unit.

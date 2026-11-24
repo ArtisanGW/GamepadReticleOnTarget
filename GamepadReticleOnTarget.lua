@@ -1,9 +1,9 @@
 -- GamepadReticleOnTarget: puts the controller UI's reticle (its aiming dot) just
 -- below your target's nameplate, so it stays on what you attack. Settings sit in
--- the game's Options > AddOns > Gamepad Reticle On Target, or /grt.
+-- the game's Options > AddOns > Gamepad Reticle On Target, or /gprt.
 --
 -- Files, one job each:
---   GamepadReticleOnTarget.lua   saved settings, the settings page, events, /grt
+--   GamepadReticleOnTarget.lua   saved settings, the settings page, events, /gprt
 --   Reticle.lua                  where the reticle goes, and when it's placed again
 --   Popup.lua                    a popup in the game's style
 --   Nameplates.lua               asks to turn on the nameplates the reticle sits under
@@ -30,7 +30,7 @@ local ReticleOnTarget = {
     DEFAULTS = { enabled = true, offset = 0, hideNpcHealthBars = false, hideNpcNames = false,
         hideNeutralHealthBars = false, hideNeutralNames = false, npcWorldNames = false, neutralWorldNames = false,
         hideNpcLevels = false, hideNeutralLevels = false, hideMinionLevels = false, npcNameSize = 100, neutralNameSize = 100,
-        hideMinionHealthBars = false, hideMinionNames = false, softTargetTooltip = false },
+        hideMinionHealthBars = false, hideMinionNames = false, reticleTooltip = false },
     OFFSET_MIN = -200, OFFSET_MAX = 200, OFFSET_STEP = 5,
     NAME_SIZE_MIN = 50, NAME_SIZE_MAX = 200, NAME_SIZE_STEP = 5,
 }
@@ -126,11 +126,12 @@ function ReticleOnTarget.RegisterSettings()
         .. "• No target: where the game aims",
         sliderOptions(ReticleOnTarget.OFFSET_MIN, ReticleOnTarget.OFFSET_MAX, ReticleOnTarget.OFFSET_STEP,
             ReticleOnTarget.OffsetLabel))
-    addSetting("softTargetTooltip", Settings.VarType.Boolean, "Tooltip on soft target",
-        "Shows the tooltip of the enemy or friend the controller picks, as the mouse does on a unit.\n\n"
-        .. "With the controller UI on, the game shows it only for NPCs you can talk to and objects. "
-        .. "A tooltip open for something else stays as it is.",
-        nil, function() ReticleOnTarget.SoftTargetTooltip.Refresh() end)
+    addSetting("reticleTooltip", Settings.VarType.Boolean, "Tooltip on the reticle",
+        "Keeps the tooltip of the unit the reticle is on, as the mouse shows it on a unit.\n\n"
+        .. "• Your target first, else the controller's soft target: an enemy, else a friend\n"
+        .. "• A tooltip open for something else stays; this one comes back after it\n\n"
+        .. "With the controller UI on, the game shows its own only for NPCs you can talk to and objects.",
+        nil, function() ReticleOnTarget.ReticleTooltip.Refresh() end)
     local function refreshHiding() ReticleOnTarget.NameplateHiding.Refresh() end
     -- Indented under a heading, as the game indents its Minions under Friendly
     -- Player Nameplates.
@@ -203,8 +204,8 @@ eventFrame:SetScript("OnEvent", function(_, event, name)
     end
 end)
 
--- /grt (or /gamepadreticleontarget) opens the settings.
-SLASH_GAMEPADRETICLEONTARGET1 = "/grt"
+-- /gprt (or /gamepadreticleontarget) opens the settings.
+SLASH_GAMEPADRETICLEONTARGET1 = "/gprt"
 SLASH_GAMEPADRETICLEONTARGET2 = "/gamepadreticleontarget"
 SlashCmdList.GAMEPADRETICLEONTARGET = function(message)
     local command, arguments = tostring(message or ""):lower():match("^%s*(%S*)%s*(.-)%s*$")

@@ -1,11 +1,11 @@
--- /grt debug: an in-game test suite. It runs through the settings one step at a
+-- /gprt debug: an in-game test suite. It runs through the settings one step at a
 -- time (a step every Debug.SECONDS_BETWEEN_STEPS, so you can watch the reticle
 -- move), checks where the reticle actually is, puts your own settings back, and
 -- keeps the findings in GamepadReticleOnTargetDebugDB, which the game writes to
 -- disk on /reload or logout. Select a target first to check the nameplate part.
---   /grt debug         runs the suite (out of combat)
---   /grt debug last    prints the last run's findings again
---   /grt debug clear   empties the saved runs
+--   /gprt debug         runs the suite (out of combat)
+--   /gprt debug last    prints the last run's findings again
+--   /gprt debug clear   empties the saved runs
 -- A fight stops the run (and puts your settings back). If a reload cuts a run
 -- short, your settings are put back at the next login.
 
@@ -157,7 +157,7 @@ local function countResults(run)
 end
 
 function Debug.PrintRun(run)
-    if not run then say("no saved run yet: /grt debug"); return end
+    if not run then say("no saved run yet: /gprt debug"); return end
     local counts = countResults(run)
     local stoppedNote = run.stopped and (" (stopped: " .. run.stopped .. ")") or ""
     say(string.format("%s: %d passed, %d failed, %d skipped%s", run.time or "?",
@@ -246,7 +246,7 @@ function Debug.Command(arguments)
         getDebugStore().runs = {}
         say("saved runs cleared")
     else
-        say("/grt debug (run the suite), /grt debug last, /grt debug clear, /grt debug tooltip")
+        say("/gprt debug (run the suite), /gprt debug last, /gprt debug clear, /gprt debug tooltip")
     end
 end
 

@@ -2,7 +2,8 @@
 
 ## 1.2.0
 
-- New option, off by default: Tooltip on soft target. Shows the tooltip of the enemy or friend the controller picks, as the mouse does on a unit
+- New option, off by default: Tooltip on the reticle. Keeps the tooltip of the unit the reticle is on: your target, else the controller's soft target
+- The chat command is now /gprt (or /gamepadreticleontarget); /grt no longer works
 
 ## 1.1.4
 

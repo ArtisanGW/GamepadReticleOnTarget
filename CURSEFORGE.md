@@ -12,8 +12,8 @@ This addon puts the reticle on your target's nameplate, right where the game sho
 It's a simple tool with no dependencies:
 - Turn it on or off
 - Move the reticle up or down, in pixels
-- Tooltip on soft target, off by default: shows the tooltip of the enemy or friend the controller picks, as the mouse does
-- Settings in Options > AddOns > Gamepad Reticle On Target, or /grt
+- Tooltip on the reticle, off by default: keeps the tooltip of the unit the reticle is on, your target or the soft target
+- Settings in Options > AddOns > Gamepad Reticle On Target, or /gprt
 
 It needs nameplates to sit on. The first time, it asks before turning on the ones that are off, and turning the addon off puts them back as they were. Which unit the controller targets is still up to the game: this only moves the dot.
 
