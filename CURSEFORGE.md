@@ -1,3 +1,5 @@
+**Summary:** Puts the controller's reticle on your target's nameplate, so it stays on what you attack.
+
 ## Description
 
 With the controller UI on, the game keeps its reticle (the aiming dot) in the middle of the screen. With an offset camera, that's often nowhere near what you're attacking.
