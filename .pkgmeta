@@ -4,6 +4,8 @@ package-as: GamepadReticleOnTarget
 
 # Comments only on their own line: the packager reads anything after an item as part of it.
 ignore:
+  # the CurseForge page text, pasted there by hand
+  - CURSEFORGE.md
   - tests
   # /grt debug, the in-game test suite; its .toc line is in a do-not-package block
   - Debug.lua

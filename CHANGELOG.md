@@ -1,5 +1,9 @@
 # Gamepad Reticle On Target
 
+## 1.1.4
+
+- Tidier code behind the scenes: nothing changes in game
+
 ## 1.1.3
 
 - The icon's orc vendor has its mohawk on its head, not floating above it
