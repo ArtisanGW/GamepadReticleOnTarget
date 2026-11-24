@@ -570,7 +570,7 @@ test("a Get button for each missing sibling, in order, each with its own CurseFo
     boot(true, nil, false, { enemies = "1", friends = "1", classColors = "1", npcs = "1", minions = "1" })
     local names = {}
     for _, initializer in ipairs(game.buttons) do if initializer.buttonText then names[#names + 1] = initializer.name .. ": " .. initializer.buttonText end end
-    expectEqual(table.concat(names, ", "), "Camera over shoulder: Get the addon, Customize the reticle: Get the addon")
+    expectEqual(table.concat(names, ", "), "Camera over shoulder: Get the addon, Customize the reticle: Get the addon, Map without its hitch: Get the addon")
     for _, initializer in ipairs(game.buttons) do
         if initializer.name == "Camera over shoulder" then initializer.onClick() end
     end

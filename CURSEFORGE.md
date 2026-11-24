@@ -27,6 +27,7 @@ For friendly NPCs, neutral NPCs and friendly players' minions (pets, guardians, 
 The reticle still goes on them, even with everything hidden. In dungeons and raids the game keeps friendly nameplates away from addons, so those stay as they are there.
 
 ## Goes well with
+- [Gamepad Fast Map](https://www.curseforge.com/projects/1827949): opens and closes the world map without its hitch.
 - [Gamepad Camera Offset](https://www.curseforge.com/projects/1818297): moves the camera over your shoulder.
 - [Gamepad Reticle Customizer](https://www.curseforge.com/projects/1818557): turns the reticle into an icon on your target: a player's class or faction, an NPC's job.
 
