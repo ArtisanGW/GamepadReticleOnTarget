@@ -5,6 +5,8 @@
 
 With the controller UI on, the game keeps its reticle (the aiming dot) in the middle of the screen. With an offset camera, that's often nowhere near what you're attacking.
 
+[![Support me on Ko-fi](https://images.weserv.nl/?url=storage.ko-fi.com/cdn/kofi5.png&h=36)](https://ko-fi.com/artisangw)
+
 This addon puts the reticle on your target's nameplate, right where the game shows its interaction icon, so it stays on the target as you both move. On quest givers it sits just below the name, clear of the game's "!" or "?". No target? It uses the controller's soft target, and with neither it stays where the game aims.
 
 It's a simple tool with no dependencies:
@@ -29,5 +31,3 @@ The reticle still goes on them, even with everything hidden. In dungeons and rai
 - [Gamepad Reticle Customizer](https://www.curseforge.com/projects/1818557): turns the reticle into an icon on your target: a player's class or faction, an NPC's job.
 
 The code is free to copy, as long as you credit it.
-
-[![Support me on Ko-fi](https://images.weserv.nl/?url=storage.ko-fi.com/cdn/kofi5.png&h=36)](https://ko-fi.com/artisangw)
