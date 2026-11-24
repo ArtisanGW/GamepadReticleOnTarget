@@ -70,13 +70,6 @@ function RelatedAddons.Missing()
     return missing
 end
 
--- A sibling by its folder name.
-function RelatedAddons.Sibling(name)
-    for _, sibling in ipairs(RelatedAddons.SIBLINGS) do
-        if sibling.NAME == name then return sibling end
-    end
-end
-
 -- Its link to copy, and a Reload for once it's installed (Popup.lua).
 -- intro (optional): a first paragraph.
 function RelatedAddons.ShowLink(sibling, intro)

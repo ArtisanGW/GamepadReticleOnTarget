@@ -154,7 +154,6 @@ function Reticle.Place()
     reticle:SetPoint("CENTER", UIParent, "BOTTOM", 0, aimHeight)
     placedOn = "screen"
 end
-function Reticle.PlacedOn() return placedOn end
 -- Where it was put on a nameplate: { anchor, height }. Asked here, not measured:
 -- a frame anchored to a nameplate (a restricted region) can't be measured from
 -- addon code (GetPoint fails: "Can't measure restricted regions").
