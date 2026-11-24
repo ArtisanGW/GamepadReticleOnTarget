@@ -22,4 +22,5 @@ RelatedAddons.lua
 #@do-not-package@
 # Development builds only: left out of the release (.pkgmeta)
 Debug.lua
+DebugTooltip.lua
 #@end-do-not-package@

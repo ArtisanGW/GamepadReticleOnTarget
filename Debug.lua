@@ -240,11 +240,13 @@ function Debug.Command(arguments)
     elseif arguments == "last" then
         local runs = getDebugStore().runs
         Debug.PrintRun(runs[#runs])
+    elseif arguments == "tooltip" then
+        Debug.TooltipProbe.Start()
     elseif arguments == "clear" then
         getDebugStore().runs = {}
         say("saved runs cleared")
     else
-        say("/grt debug (run the suite), /grt debug last, /grt debug clear")
+        say("/grt debug (run the suite), /grt debug last, /grt debug clear, /grt debug tooltip")
     end
 end
 

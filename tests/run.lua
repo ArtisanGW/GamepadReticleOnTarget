@@ -220,7 +220,10 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "NameplateNames.lua", "NameplateHiding.lua", "RelatedAddons.lua" }) do
         assert(loadfile(file))("GamepadReticleOnTarget", namespace)
     end
-    if not releaseBuild then assert(loadfile("Debug.lua"))("GamepadReticleOnTarget", namespace) end
+    if not releaseBuild then
+        assert(loadfile("Debug.lua"))("GamepadReticleOnTarget", namespace)
+        assert(loadfile("DebugTooltip.lua"))("GamepadReticleOnTarget", namespace)
+    end
     fire("ADDON_LOADED", "GamepadReticleOnTarget")
 end
 local function runNextFrame() local dueTimers = game.timers; game.timers = {}; for _, timer in ipairs(dueTimers) do timer() end end
