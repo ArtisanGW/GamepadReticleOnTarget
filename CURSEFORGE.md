@@ -1,7 +1,17 @@
-**Summary:** Puts the controller's reticle on your target's nameplate, so it stays on what you attack.
-**Categories:** Combat, Unit Frames
+# Summary
 
-## Description
+Puts the controller's reticle on your target's nameplate, so it stays on what you attack.
+
+# Categories
+
+- Combat
+- Unit Frames
+
+# License
+
+Apache License 2.0
+
+# Description
 
 With the controller UI on, the game keeps its reticle (the aiming dot) in the middle of the screen. With an offset camera, that's often nowhere near what you're attacking.
 
