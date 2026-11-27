@@ -4,6 +4,8 @@ package-as: GamepadReticleOnTarget
 
 # Comments only on their own line: the packager reads anything after an item as part of it.
 ignore:
+  # the screenshots for the CurseForge gallery
+  - Media/screenshots
   # the CurseForge page text, pasted there by hand
   - CURSEFORGE.md
   - tests
