@@ -10,6 +10,9 @@
 --   NameplateNames.lua           an NPC's name drawn as the game's world names: color, title
 --   NameplateHiding.lua          hides health bars or names on friendly and neutral NPCs' and minions' nameplates
 --   RelatedAddons.lua             hints for our other controller addons
+--   ReticleTooltip.lua            the unit tooltip for the unit the reticle is on
+--   Debug.lua                     development builds only: /gprt debug
+--   DebugTooltip.lua              development builds only: /gprt debug tooltip
 local ADDON_NAME = ...
 
 local ReticleOnTarget = {
