@@ -16,8 +16,6 @@ ignore:
   # the icon's source and its CurseForge size; the game uses Media/icon-64.png
   - Media/icon.svg
   - Media/icon-400.png
-  # earlier icon drafts, kept for reference
-  - Media/alternatives
 
 # The changelog shown with each release: written by hand, not built from commit messages.
 manual-changelog:
