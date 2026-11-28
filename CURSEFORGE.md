@@ -1,6 +1,6 @@
 # Summary
 
-Puts the controller's reticle on your target's nameplate, so it stays on what you attack.
+Lock your sights on the enemy. The controller's reticle sits on your target's nameplate and stays on what you attack.
 
 # Categories
 
