@@ -217,12 +217,12 @@ local function boot(gamepad, saved, releaseBuild, nameplateOptions)
     game.printed = printed
     _G.print = function(text) printed[#printed + 1] = text end
     local namespace = {}
-    for _, file in ipairs({ "GamepadReticleOnTarget.lua", "Reticle.lua", "Popup.lua", "Nameplates.lua", "NameplateNames.lua", "NameplateHiding.lua", "RelatedAddons.lua", "ReticleTooltip.lua" }) do
+    for _, file in ipairs({ "Code/GamepadReticleOnTarget.lua", "Code/Reticle.lua", "Code/Popup.lua", "Code/Nameplates.lua", "Code/NameplateNames.lua", "Code/NameplateHiding.lua", "Code/RelatedAddons.lua", "Code/ReticleTooltip.lua" }) do
         assert(loadfile(file))("GamepadReticleOnTarget", namespace)
     end
     if not releaseBuild then
-        assert(loadfile("Debug.lua"))("GamepadReticleOnTarget", namespace)
-        assert(loadfile("DebugTooltip.lua"))("GamepadReticleOnTarget", namespace)
+        assert(loadfile("Code/Debug.lua"))("GamepadReticleOnTarget", namespace)
+        assert(loadfile("Code/DebugTooltip.lua"))("GamepadReticleOnTarget", namespace)
     end
     fire("ADDON_LOADED", "GamepadReticleOnTarget")
 end
@@ -529,14 +529,14 @@ end)
 
 test("the release leaves Debug.lua out; listed under Gamepad", function()
     local function readFile(path) local file = assert(io.open(path)); local text = file:read("*a"); file:close(); return text end
-    assert(readFile(".pkgmeta"):find("\n  %- Debug%.lua\n"), ".pkgmeta ignores Debug.lua, alone on its line")
+    assert(readFile(".pkgmeta"):find("\n  %- Code/Debug%.lua\n"), ".pkgmeta ignores Debug.lua, alone on its line")
     local toc = readFile("GamepadReticleOnTarget.toc"):gsub("\r", "")
     local releaseToc = toc:gsub("#@do%-not%-package@.-#@end%-do%-not%-package@\n?", "")
     local loadedFiles = {}
     for line in releaseToc:gmatch("[^\n]+") do
         if not line:find("^#") then loadedFiles[#loadedFiles + 1] = line end
     end
-    expectEqual(table.concat(loadedFiles, ","), "GamepadReticleOnTarget.lua,Reticle.lua,Popup.lua,Nameplates.lua,NameplateNames.lua,NameplateHiding.lua,RelatedAddons.lua,ReticleTooltip.lua")
+    expectEqual(table.concat(loadedFiles, ","), "Code/GamepadReticleOnTarget.lua,Code/Reticle.lua,Code/Popup.lua,Code/Nameplates.lua,Code/NameplateNames.lua,Code/NameplateHiding.lua,Code/RelatedAddons.lua,Code/ReticleTooltip.lua")
     expectEqual(toc:match("## Category: ([^\n]+)"), "Gamepad")
 end)
 
@@ -552,8 +552,8 @@ end)
 test("its icon in the AddOns list: Media/icon-64.png, shipped", function()
     local function readFile(path) local file = assert(io.open(path, "rb")); local text = file:read("*a"); file:close(); return text end
     local toc = readFile("GamepadReticleOnTarget.toc"):gsub("\r", "")
-    expectEqual(toc:match("## IconTexture: ([^\n]+)"), "Interface\\AddOns\\GamepadReticleOnTarget\\Media\\icon-64.png")
-    expectEqual(readFile("Media/icon-64.png"):sub(2, 4), "PNG", "a PNG file")
+    expectEqual(toc:match("## IconTexture: ([^\n]+)"), "Interface\\AddOns\\GamepadReticleOnTarget\\Code\\Media\\icon-64.png")
+    expectEqual(readFile("Code/Media/icon-64.png"):sub(2, 4), "PNG", "a PNG file")
     expectEqual(readFile(".pkgmeta"):find("- Media/icon-64.png", 1, true), nil, "not left out of the release")
 end)
 

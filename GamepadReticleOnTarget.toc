@@ -10,18 +10,18 @@
 # ## SavedVariables: GamepadReticleOnTargetDB
 #@end-non-debug@
 ## Category: Gamepad
-## IconTexture: Interface\AddOns\GamepadReticleOnTarget\Media\icon-64.png
+## IconTexture: Interface\AddOns\GamepadReticleOnTarget\Code\Media\icon-64.png
 
-GamepadReticleOnTarget.lua
-Reticle.lua
-Popup.lua
-Nameplates.lua
-NameplateNames.lua
-NameplateHiding.lua
-RelatedAddons.lua
-ReticleTooltip.lua
+Code/GamepadReticleOnTarget.lua
+Code/Reticle.lua
+Code/Popup.lua
+Code/Nameplates.lua
+Code/NameplateNames.lua
+Code/NameplateHiding.lua
+Code/RelatedAddons.lua
+Code/ReticleTooltip.lua
 #@do-not-package@
 # Development builds only: left out of the release (.pkgmeta)
-Debug.lua
-DebugTooltip.lua
+Code/Debug.lua
+Code/DebugTooltip.lua
 #@end-do-not-package@
