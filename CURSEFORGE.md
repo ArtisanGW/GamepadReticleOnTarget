@@ -9,7 +9,7 @@ Puts the controller's reticle on your target's nameplate, so it stays on what yo
 
 # License
 
-Apache License 2.0
+GNU General Public License version 3 (GPLv3)
 
 # Description
 
